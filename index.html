@@ -1,0 +1,2044 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0E2C49">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="./icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icon.svg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Bilan FDR">
+<title>Bilan trimestriel et feuille de route franchisé</title>
+<style>
+:root{
+  --navy:#0E2C49;
+  --navy-soft:#1B3E62;
+  --bleu:#1E73BE;
+  --vert:#1C9C73;
+  --rouge:#C0392B;
+  --ambre:#E08A2E;
+  --fond:#F4F6F9;
+  --papier:#FFFFFF;
+  --encre:#16222E;
+  --gris:#6B7A88;
+  --trait:#DCE3EA;
+  --r:6px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--fond);color:var(--encre);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  font-size:15px;line-height:1.5;-webkit-text-size-adjust:100%;
+}
+
+/* ---------- en-tête ---------- */
+header{position:sticky;top:0;z-index:50;background:var(--navy);color:#fff;border-bottom:3px solid var(--bleu)}
+.hwrap{max-width:1080px;margin:0 auto;padding:10px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.mark{font-weight:700;letter-spacing:.02em;font-size:17px;white-space:nowrap}
+.mark span{color:#8FC0EC;font-weight:400}
+header select,header input{
+  background:var(--navy-soft);color:#fff;
+  border:1px solid #37587E;border-radius:var(--r);padding:7px 9px;font:inherit;font-size:14px;
+}
+header input::placeholder{color:#9FB5CC}
+#magasin{flex:1 1 220px;min-width:0}
+#exercice{width:104px}
+.hactions{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.hbtn{background:var(--bleu);color:#fff;border:0;border-radius:var(--r);padding:8px 13px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center}
+.hbtn.ghost{background:transparent;border:1px solid #37587E}
+.hbtn:hover{filter:brightness(1.08)}
+.hbtn input{display:none}
+.jauge{width:100%;height:3px;background:#37587E;border-radius:2px;overflow:hidden}
+.jauge i{display:block;height:100%;width:0;background:var(--vert);transition:width .3s}
+
+/* ---------- structure ---------- */
+main{max-width:1080px;margin:0 auto;padding:20px 16px 80px}
+section{
+  background:var(--papier);border:1px solid var(--trait);border-left:4px solid var(--navy);
+  border-radius:var(--r);padding:16px 18px;margin-bottom:14px;
+}
+section.pilote{border-left-color:var(--bleu)}
+section.actions{border-left-color:var(--vert)}
+h2{margin:0 0 4px;font-size:16px;font-weight:700;color:var(--navy);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+h2 .compte{font-size:12px;font-weight:600;color:var(--gris)}
+.sous{margin:0 0 14px;font-size:13px;color:var(--gris)}
+.lien{background:none;border:0;color:var(--bleu);font:inherit;font-size:13px;text-decoration:underline;cursor:pointer;padding:0}
+h2 .lien{margin-left:auto;font-weight:600;white-space:nowrap}
+
+label.champ{display:block;font-size:12px;font-weight:600;color:var(--gris);margin-bottom:4px}
+textarea,input[type=text],input[type=date],select{
+  width:100%;font:inherit;color:var(--encre);
+  border:1px solid var(--trait);border-radius:var(--r);padding:8px 10px;background:#fff;
+}
+header input[type=text],header input[type=date],header select{width:auto;color:#fff;background:var(--navy-soft);border-color:#37587E;padding:7px 9px}
+header input[type=text]#magasin{flex:1 1 220px;min-width:0}
+header input[type=text]#exercice{width:104px}
+header input[type=date]{color-scheme:dark}
+textarea{resize:vertical;min-height:70px;line-height:1.45}
+textarea:focus,input:focus,select:focus{outline:2px solid var(--bleu);outline-offset:1px;border-color:var(--bleu)}
+
+/* ---------- import ---------- */
+.puces{display:flex;gap:7px;flex-wrap:wrap}
+.puce{font-size:12px;font-weight:600;padding:4px 10px;border-radius:20px;border:1px solid var(--trait);color:var(--gris);background:#fff}
+.puce.ok{background:var(--vert);border-color:var(--vert);color:#fff}
+label.imp{display:inline-flex;align-items:center;gap:6px;cursor:pointer;
+  background:var(--bleu);color:#fff;border-radius:var(--r);padding:5px 13px;font-size:13px;font-weight:600;white-space:nowrap}
+h2 .lien + label.imp{margin-left:4px}
+label.imp:hover{filter:brightness(1.08)}
+label.imp input{display:none}
+.sousimp{margin:0 0 12px;font-size:12.5px}
+h3.sousTitre{margin:16px 0 6px;font-size:13px;font-weight:700;color:var(--gris)}
+
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:720px){.duo{grid-template-columns:1fr}}
+.barre{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px}
+.btn{background:var(--bleu);color:#fff;border:0;border-radius:var(--r);padding:9px 16px;font:inherit;font-weight:600;cursor:pointer}
+.btn.sec{background:#fff;color:var(--navy);border:1px solid var(--trait)}
+.btn:hover{filter:brightness(1.06)}
+.etat{font-size:13px;color:var(--gris)}
+.etat.ko{color:var(--rouge);font-weight:600}
+.etat.ok{color:var(--vert);font-weight:600}
+
+/* ---------- tableaux ---------- */
+.enrobe{overflow-x:auto}
+.tb{width:100%;border-collapse:collapse;margin-top:6px}
+.enrobe .tb{min-width:700px}
+.tb th{text-align:right;font-size:11.5px;font-weight:700;color:var(--gris);padding:6px 8px;border-bottom:1px solid var(--trait)}
+.tb th:first-child{text-align:left}
+.tb td{padding:6px 8px;border-bottom:1px solid #EEF2F6;text-align:right;font-variant-numeric:tabular-nums}
+.tb td:first-child{text-align:left;font-weight:600;color:var(--navy);white-space:nowrap}
+.tb tr:last-child td{border-bottom:0}
+.tb tr.total td{border-top:1px solid var(--trait);font-weight:700}
+.tb .saisie{width:100%;min-width:84px;border:1px solid transparent;background:#F8FAFC;text-align:right;padding:5px 7px;border-radius:4px;font:inherit;font-variant-numeric:tabular-nums}
+.tb .saisie:hover{border-color:var(--trait)}
+.tb .saisie.calc{color:var(--gris);font-style:italic;background:transparent}
+.d{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.d.pos{color:var(--vert)}
+.d.neg{color:var(--rouge)}
+.d.neu{color:var(--gris)}
+.tb td.colBarre{width:100px}
+.tb td{white-space:nowrap}
+.tb td.sec{color:var(--gris)}
+.second{font-size:11px;color:var(--gris);font-weight:400}
+.tb td b{color:var(--encre)}
+.barreD{position:relative;display:inline-block;width:90px;height:8px;background:#EEF2F6;border-radius:4px;vertical-align:middle}
+.barreD::after{content:"";position:absolute;left:50%;top:-3px;bottom:-3px;width:1px;background:#9AA8B5}
+.barreD i{position:absolute;top:0;bottom:0;background:var(--gris)}
+.barreD i.pos{background:var(--vert);border-radius:0 4px 4px 0}
+.barreD i.neg{background:var(--rouge);border-radius:4px 0 0 4px}
+
+/* ---------- lecture ---------- */
+.constat{border:1px solid var(--trait);border-left:3px solid var(--gris);border-radius:var(--r);padding:10px 13px;margin-bottom:8px;background:#FBFCFD}
+.constat.alerte{border-left-color:var(--rouge);background:#FDF6F5}
+.constat.vigilance{border-left-color:var(--ambre);background:#FEFAF3}
+.constat.favorable{border-left-color:var(--vert);background:#F4FBF8}
+.constat h3{margin:0 0 3px;font-size:14px;font-weight:700;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.constat p{margin:0;font-size:13.5px;color:#37474F}
+.constat .tag{font-size:11px;font-weight:600;color:var(--gris);border:1px solid var(--trait);border-radius:10px;padding:0 7px;background:#fff}
+.vide{color:var(--gris);font-size:13.5px;font-style:italic;margin:0}
+
+.croise{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:10px}
+@media(max-width:720px){.croise{grid-template-columns:1fr 1fr}}
+.croise > div{border:1px solid var(--trait);border-radius:var(--r);padding:8px 11px;background:#FBFCFD}
+.croise .lib{font-size:12px;color:var(--gris);font-weight:600}
+.croise .val{font-size:19px;font-weight:700;font-variant-numeric:tabular-nums}
+
+/* ---------- plan d'action ---------- */
+.pa{width:100%;border-collapse:collapse;min-width:900px}
+.pa th{font-size:11.5px;color:var(--gris);text-align:left;padding:5px 6px;border-bottom:1px solid var(--trait);font-weight:700}
+.pa td{padding:5px 6px;border-bottom:1px solid #EEF2F6;vertical-align:top}
+.pa input,.pa select,.pa textarea{padding:6px 8px;font-size:13.5px}
+.pa textarea{min-height:52px}
+.sup{background:none;border:0;color:var(--gris);font-size:17px;cursor:pointer;line-height:1;padding:4px 6px}
+.sup:hover{color:var(--rouge)}
+
+/* ---------- impression ---------- */
+@media print{
+  header{position:static}
+  .hactions,.barre,.sup,.lien,.noprint,label.imp{display:none!important}
+  body{background:#fff;font-size:11.5px}
+  main{padding:0;max-width:none}
+  section{break-inside:avoid;margin-bottom:9px;padding:10px 12px}
+  textarea{border:1px solid #ccc;min-height:0;height:auto}
+  .pa,.enrobe .tb{min-width:0}
+}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+@media(max-width:720px){header{position:static}}
+.tb th{white-space:nowrap}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <div class="mark">Bilan <span>et feuille de route franchisé</span></div>
+    <select id="trimestre" aria-label="Trimestre du bilan">
+      <option>T1</option><option>T2</option><option>T3</option><option>T4</option>
+    </select>
+    <input type="text" id="exercice" aria-label="Exercice" placeholder="2025-2026">
+    <input type="text" id="magasin" list="listeMag" aria-label="Magasin" placeholder="Magasin (code ou nom)">
+    <datalist id="listeMag"></datalist>
+    <input type="date" id="dateBilan" aria-label="Date du bilan">
+    <div class="hactions">
+      <button class="hbtn ghost" onclick="remiseAZero()">RAZ</button>
+      <label class="hbtn ghost" title="Reprendre un bilan enregistré">Ouvrir<input type="file" accept=".json" onchange="ouvrir(this)"></label>
+      <button class="hbtn ghost" onclick="exportJSON()">Enregistrer</button>
+      <button class="hbtn" id="btnPdf" onclick="exporterPDF()">Export PDF</button>
+      <button class="hbtn ghost" onclick="window.print()">Imprimer</button>
+    </div>
+    <div class="jauge" title="Avancement du bilan"><i id="jauge"></i></div>
+  </div>
+</header>
+
+<main>
+
+<!-- CADRE -->
+<section class="pilote">
+  <h2>Cadre du bilan
+    <label class="imp" style="margin-left:auto" title="Performance CA version Pabad, PMCA 12 mois glissants, Synthèse client. Les trois d'un coup ou séparément.">Importer les tableaux
+      <input type="file" accept=".xlsx,.xlsm" multiple onchange="importer(this,'cadre')">
+    </label>
+  </h2>
+  <p class="sous" id="sousCadre"></p>
+  <p class="etat sousimp" id="etat_cadre">Importez les trois tableaux réseau, puis choisissez le magasin dans l'en-tête. Chaque tableau est reconnu automatiquement.</p>
+  <div class="duo">
+    <div><label class="champ" for="franchise">Franchisé</label><input type="text" id="franchise"></div>
+    <div><label class="champ" for="participants">Participants au point</label><input type="text" id="participants"></div>
+  </div>
+  <div class="puces" id="sources" style="margin-top:12px"></div>
+</section>
+
+<!-- 1. PERFS ACC ET PRESTA -->
+<section>
+  <h2>Perfs ACC et Presta
+    <label class="imp" style="margin-left:auto" title="Performance CA version Pabad (.xlsm).">Import
+      <input type="file" accept=".xlsx,.xlsm" multiple onchange="importer(this,'perf')">
+    </label>
+  </h2>
+  <p class="etat sousimp" id="etat_perf"></p>
+  <div id="corps_perf"></div>
+  <h3 class="sousTitre">Lecture</h3>
+  <div id="lecture_perf"></div>
+</section>
+
+<!-- 2. PMCA -->
+<section>
+  <h2>PMCA
+    <label class="imp" style="margin-left:auto" title="PMCA 12 mois glissants, onglets N et N-1.">Import
+      <input type="file" accept=".xlsx,.xlsm" multiple onchange="importer(this,'pmca')">
+    </label>
+  </h2>
+  <p class="etat sousimp" id="etat_pmca"></p>
+  <div id="corps_pmca"></div>
+  <h3 class="sousTitre">Lecture</h3>
+  <div id="lecture_pmca"></div>
+</section>
+
+<!-- 3. SYNTHÈSE CLIENT -->
+<section>
+  <h2>Synthèse client
+    <label class="imp" style="margin-left:auto" title="Synthèse client de fin d'exercice.">Import
+      <input type="file" accept=".xlsx,.xlsm" multiple onchange="importer(this,'clients')">
+    </label>
+  </h2>
+  <p class="etat sousimp" id="etat_clients"></p>
+  <div id="corps_clients"></div>
+  <h3 class="sousTitre">Lecture</h3>
+  <div id="lecture_clients"></div>
+</section>
+
+<!-- LECTURE CROISÉE -->
+<section class="pilote">
+  <h2>Lecture croisée</h2>
+  <p class="sous">L'évolution du CA sur 12 mois se décompose en nombre de clients, fréquence d'achat et PMF. Les trois tableaux sont aussi rapprochés pour vérifier qu'ils racontent la même chose.</p>
+  <div id="croisee"></div>
+</section>
+
+<!-- BILAN -->
+<section class="actions">
+  <h2>Bilan <span class="libT"></span> <span class="compte" id="compteBilan"></span></h2>
+  <p class="sous">Repris automatiquement des trois lectures. Les commentaires complètent le mail et le PDF.</p>
+  <div class="duo">
+    <div><h3 class="sousTitre" style="margin-top:4px">Points forts</h3><div id="forts"></div></div>
+    <div><h3 class="sousTitre" style="margin-top:4px">Points de vigilance</h3><div id="vigilance"></div></div>
+  </div>
+  <div class="duo" style="margin-top:12px">
+    <div><label class="champ" for="lectureCR">Lecture du CR</label><textarea id="lectureCR"></textarea></div>
+    <div><label class="champ" for="retourFranchise">Retour du franchisé</label><textarea id="retourFranchise"></textarea></div>
+  </div>
+</section>
+
+<!-- FEUILLE DE ROUTE -->
+<section class="actions">
+  <h2>Feuille de route <span class="libTs"></span></h2>
+  <h3 class="sousTitre" style="margin-top:4px">Objectifs chiffrés</h3>
+  <div class="enrobe"><table class="tb" id="tabObjectifs"></table></div>
+
+  <h3 class="sousTitre">Potentiel presta calculé dans le tableau Performance</h3>
+  <div id="potentiel"></div>
+
+  <h3 class="sousTitre">Plan d'action <span class="compte" id="comptePA"></span></h3>
+  <div class="enrobe">
+    <table class="pa">
+      <thead><tr>
+        <th style="width:12%">Axe</th><th style="width:21%">Constat</th><th style="width:24%">Action</th>
+        <th style="width:12%">Responsable</th><th style="width:11%">Échéance</th><th style="width:12%">Indicateur</th>
+        <th style="width:6%">Prio</th><th></th>
+      </tr></thead>
+      <tbody id="corpsPA"></tbody>
+    </table>
+  </div>
+  <div class="barre">
+    <button class="btn" onclick="proposerPA()">Reprendre les points de vigilance</button>
+    <button class="btn sec" onclick="ajouterPA()">Ajouter une action</button>
+  </div>
+  <div style="max-width:220px;margin-top:14px">
+    <label class="champ" for="prochainPoint">Prochain point de suivi</label>
+    <input type="date" id="prochainPoint">
+  </div>
+</section>
+
+<!-- MAIL -->
+<section class="actions">
+  <h2>Mail de bilan et feuille de route</h2>
+  <p class="sous">Adressé au franchisé. Recomposé à partir des chiffres, du bilan et du plan d'action, modifiable avant envoi.</p>
+  <div class="barre" style="margin-top:0">
+    <button class="btn" onclick="composerFDR()">Composer le mail</button>
+    <button class="btn sec" onclick="copierFDR()">Copier</button>
+    <span class="etat" id="motsFDR"></span>
+  </div>
+  <textarea id="texteFDR" style="min-height:340px;margin-top:10px"></textarea>
+</section>
+
+</main>
+
+<script>
+"use strict";
+
+/* ===== réglages ===== */
+const EXERCICE_DEBUT = 9;              // l'exercice commence en septembre : T1 sept-nov ... T4 juin-août
+const S_VIGIL = 0.03, S_ALERTE = 0.08; // seuils sur les évolutions en %
+const S_VIGIL_PT = 0.01, S_ALERTE_PT = 0.02; // seuils sur les taux, en points
+const ECART_VALEUR = [0.10, 0.20];     // écart au réseau sur une valeur (CA par homme, PMC…)
+const ECART_TAUX = [0.02, 0.05];       // écart au réseau sur un taux, en points
+const TX_FA_CIBLE = 0.045;             // repris de l'entête « Gain FA € // Tx de FA 4,5% »
+const MOTS_MAX = 1000;
+const STOCKAGE = "bfr:brouillon";
+const SCHEMA = 2;
+
+const RESPONSABLES = ["Franchisé","Responsable magasin","Chef d'atelier","Équipe de vente","CR"];
+const AXES = ["Perf ACC","Presta","PMCA","Clients","Autre"];
+const MOIS_NOMS = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
+const JSPDF_URL = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+const AUTOTABLE_URL = "https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js";
+
+/* ===== état ===== */
+function etatVide(){
+  return {
+    schema:SCHEMA, trimestre:"T4", exercice:"", magasin:"", date:"", franchise:"", participants:"",
+    base:{perf:null, pmca:null, clients:null},
+    lectureCR:"", retourFranchise:"", objectifs:{}, pa:[], prochainPoint:"", fdr:""
+  };
+}
+const E = etatVide();
+const memo = {
+  lire(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } },
+  ecrire(k, v){ try{ localStorage.setItem(k, v); return true; }catch(e){ return false; } }
+};
+
+/* ===== nombres et formats ===== */
+function nombre(txt){
+  if(txt === null || txt === undefined) return null;
+  if(typeof txt === "number") return isFinite(txt) ? txt : null;
+  let s = String(txt).trim();
+  if(!s) return null;
+  const pct = /%/.test(s);
+  s = s.replace(/[€\s\u00A0\u202F%]/g,"").replace(/\u2212/g,"-");
+  if(!/^[+-]?[\d.,]+(e[+-]?\d+)?$/i.test(s)) return null;
+  const iv = s.lastIndexOf(","), ip = s.lastIndexOf(".");
+  if(iv > -1 && ip > -1){
+    if(iv > ip) s = s.replace(/\./g,"").replace(",",".");
+    else s = s.replace(/,/g,"");
+  } else if(iv > -1){
+    s = (s.match(/,/g).length > 1) ? s.replace(/,/g,"") : s.replace(",",".");
+  }
+  const v = parseFloat(s);
+  if(!isFinite(v)) return null;
+  return pct ? v/100 : v;
+}
+function fini(v){ return (typeof v === "number" && isFinite(v)) ? v : null; }
+function div(a, b){ return (a === null || b === null || a === undefined || b === undefined || !isFinite(a) || !isFinite(b) || b === 0) ? null : a/b; }
+function Z(v){ return (v === 0 || v === undefined) ? null : v; }
+function virgule(v, d){ return v.toFixed(d).replace(".",","); }
+function fmt(v, type){
+  if(v === null || v === undefined || !isFinite(v)) return "—";
+  switch(type){
+    case "eur":  return Math.round(v).toLocaleString("fr-FR") + " €";
+    case "eur2": return v.toLocaleString("fr-FR", {minimumFractionDigits:2, maximumFractionDigits:2}) + " €";
+    case "pct":  return virgule(v*100, 1) + " %";
+    case "ent":  return Math.round(v).toLocaleString("fr-FR");
+    case "dec1": return virgule(v, 1);
+    case "dec2": return virgule(v, 2);
+    case "rang": return Math.round(v) + "e";
+    default: return String(v);
+  }
+}
+function estTaux(f){ return f === "pct"; }
+/* évolution : relative pour un montant, en points pour un taux */
+function variation(f, a, b){
+  if(a === null || a === undefined || b === null || b === undefined) return null;
+  if(estTaux(f)) return a - b;
+  return (b === 0 || !isFinite(a/b)) ? null : a/b - 1;
+}
+function signe(v){ return v > 0 ? "+" : ""; }
+function arrondi1(e){ const v = Math.round(e*1000)/10; return v === 0 ? 0 : v; }
+function fmtPct(e){ if(e === null || e === undefined) return "—"; const v = arrondi1(e); return signe(v) + virgule(v, 1) + " %"; }
+function fmtPts(e){ if(e === null || e === undefined) return "—"; const v = arrondi1(e); return signe(v) + virgule(v, 1) + " pt"; }
+function fmtVar(f, e){ return estTaux(f) ? fmtPts(e) : fmtPct(e); }
+function fmtVarAbs(f, e){ return virgule(Math.abs(e)*100, 1) + (estTaux(f) ? " pt" : " %"); }
+function seuilsEvol(f){ return estTaux(f) ? [S_VIGIL_PT, S_ALERTE_PT] : [S_VIGIL, S_ALERTE]; }
+function seuilsEcart(f){ return estTaux(f) ? ECART_TAUX : ECART_VALEUR; }
+function classe(e, seuil, sens){
+  if(e === null || e === undefined || sens === 0) return "neu";
+  const x = (sens || 1) * e;
+  return x >= seuil ? "pos" : (x <= -seuil ? "neg" : "neu");
+}
+function esc(s){ return String(s === null || s === undefined ? "" : s).replace(/[&<>"']/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m])); }
+function minuscule(s){ return s ? s.charAt(0).toLowerCase() + s.slice(1) : s; }
+function majuscule(s){ return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
+function nk(s){
+  return String(s === null || s === undefined ? "" : s).normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .toLowerCase().replace(/[^a-z0-9%+\-\/ ]/g," ").replace(/\s+/g," ").trim();
+}
+function codeSite(s){
+  const m = String(s || "").trim().match(/^([0-9A-Za-z]{2,4})\s*-\s*\S/);
+  return m ? m[1].toUpperCase() : "";
+}
+function nomCourt(site){ return String(site || "").replace(/^[0-9A-Za-z]{2,4}\s*-\s*/, "").trim(); }
+
+/* ===== calendrier de l'exercice ===== */
+function numT(t){ return Math.min(4, Math.max(1, parseInt(String(t).replace(/\D/g,""), 10) || 4)); }
+function moisDuTrimestre(t){
+  const n = numT(t);
+  return [0,1,2].map(i => ((EXERCICE_DEBUT - 1 + (n-1)*3 + i) % 12) + 1);
+}
+function anneesExercice(ex){
+  const s = String(ex === undefined ? E.exercice : ex || "");
+  let m = s.match(/(\d{4})\D+(\d{2,4})/);
+  if(m){ const a = +m[1]; let b = +m[2]; if(b < 100) b += 2000; return [a, b]; }
+  m = s.match(/(\d{4})/);
+  return m ? [+m[1]-1, +m[1]] : null;
+}
+function libEx(a){ return a ? a[0] + "-" + a[1] : ""; }
+function exerciceDecale(n){ const a = anneesExercice(); return a ? libEx([a[0]-n, a[1]-n]) : "N-" + n; }
+function trimestreSuivant(){
+  const n = numT(E.trimestre), a = anneesExercice();
+  return n === 4 ? {t:"T1", ex: a ? [a[0]+1, a[1]+1] : null} : {t:"T" + (n+1), ex:a};
+}
+function finTrimestre(t, ex){
+  if(!ex) return "";
+  const m = moisDuTrimestre(t)[2];
+  const y = m >= EXERCICE_DEBUT ? ex[0] : ex[1];
+  return new Date(Date.UTC(y, m, 0)).toISOString().slice(0,10);
+}
+function dernierTrimestreClos(d){
+  const m = d.getMonth() + 1, y = d.getFullYear();
+  const debut = m >= EXERCICE_DEBUT ? y : y - 1;
+  const courant = Math.floor(((m - EXERCICE_DEBUT + 12) % 12) / 3) + 1;
+  return courant === 1 ? {t:"T4", ex:[debut-1, debut]} : {t:"T" + (courant-1), ex:[debut, debut+1]};
+}
+function libT(){ return E.trimestre + (E.exercice ? " " + E.exercice : ""); }
+function libTs(){ const s = trimestreSuivant(); return s.t + (s.ex ? " " + libEx(s.ex) : ""); }
+function dateFr(iso){ return iso ? new Date(iso + "T12:00:00").toLocaleDateString("fr-FR") : ""; }
+/* ===== lecture des classeurs Excel en flux =====
+   Les exports réseau peuvent peser des centaines de Mo une fois décompressés
+   (lignes vides formatées jusqu'à la ligne 1 048 576). On lit donc le zip
+   directement, feuille par feuille, en décompressant au fil de l'eau, et on
+   s'arrête dès que les données sont passées. Aucune bibliothèque externe. */
+const XL_MAX_VIDES = 400;      // lignes vides consécutives après les données : fin de lecture
+const XL_MAX_LIGNES = 20000;
+
+async function xlOctets(blob, debut, fin){ return new Uint8Array(await blob.slice(debut, fin).arrayBuffer()); }
+
+async function xlCentral(blob){
+  const taille = blob.size;
+  const queue = await xlOctets(blob, Math.max(0, taille - 66000), taille);
+  const dv = new DataView(queue.buffer);
+  let eocd = -1;
+  for(let i = queue.length - 22; i >= 0; i--){ if(dv.getUint32(i, true) === 0x06054b50){ eocd = i; break; } }
+  if(eocd < 0) throw new Error("ce fichier n'est pas un classeur Excel (xlsx, xlsm)");
+  const nb = dv.getUint16(eocd + 10, true);
+  const tailleCd = dv.getUint32(eocd + 12, true), offCd = dv.getUint32(eocd + 16, true);
+  const cd = await xlOctets(blob, offCd, offCd + tailleCd);
+  const cv = new DataView(cd.buffer);
+  const entrees = {};
+  const dec = new TextDecoder();
+  let p = 0;
+  for(let n = 0; n < nb && p + 46 <= cd.length; n++){
+    if(cv.getUint32(p, true) !== 0x02014b50) break;
+    const methode = cv.getUint16(p + 10, true);
+    const comp = cv.getUint32(p + 20, true);
+    const lnom = cv.getUint16(p + 28, true), lext = cv.getUint16(p + 30, true), lcom = cv.getUint16(p + 32, true);
+    const offLocal = cv.getUint32(p + 42, true);
+    const nom = dec.decode(cd.subarray(p + 46, p + 46 + lnom));
+    entrees[nom] = {methode:methode, comp:comp, offLocal:offLocal};
+    p += 46 + lnom + lext + lcom;
+  }
+  return entrees;
+}
+
+async function xlFlux(blob, e){
+  const loc = await xlOctets(blob, e.offLocal, e.offLocal + 30);
+  const lv = new DataView(loc.buffer);
+  const debut = e.offLocal + 30 + lv.getUint16(26, true) + lv.getUint16(28, true);
+  const brut = blob.slice(debut, debut + e.comp).stream();
+  if(e.methode === 0) return brut;
+  if(e.methode !== 8) throw new Error("compression non prise en charge");
+  if(typeof DecompressionStream === "undefined") throw new Error("navigateur trop ancien pour lire ce classeur");
+  return brut.pipeThrough(new DecompressionStream("deflate-raw"));
+}
+
+async function xlTexte(blob, e){
+  if(!e) return "";
+  const lecteur = (await xlFlux(blob, e)).pipeThrough(new TextDecoderStream()).getReader();
+  let t = "";
+  for(;;){ const r = await lecteur.read(); if(r.done) break; t += r.value; }
+  return t;
+}
+
+function xlEntites(s){
+  if(s.indexOf("&") < 0) return s;
+  return s.replace(/&(#x[0-9a-f]+|#\d+|amp|lt|gt|quot|apos);/gi, (m, c) => {
+    if(c[0] === "#") return String.fromCodePoint(c[1] === "x" || c[1] === "X" ? parseInt(c.slice(2), 16) : parseInt(c.slice(1), 10));
+    return {amp:"&", lt:"<", gt:">", quot:'"', apos:"'"}[c.toLowerCase()];
+  });
+}
+function xlAttr(tag, nom){
+  const m = tag.match(new RegExp("\\s" + nom + "=\"([^\"]*)\""));
+  return m ? xlEntites(m[1]) : null;
+}
+function xlColonne(ref){
+  let n = 0;
+  for(let i = 0; i < ref.length; i++){
+    const c = ref.charCodeAt(i);
+    if(c < 65 || c > 90) break;
+    n = n*26 + (c - 64);
+  }
+  return n - 1;
+}
+
+async function ouvrirClasseur(blob){
+  const entrees = await xlCentral(blob);
+  const wb = await xlTexte(blob, entrees["xl/workbook.xml"]);
+  if(!wb) throw new Error("classeur illisible : workbook.xml absent");
+  const rels = await xlTexte(blob, entrees["xl/_rels/workbook.xml.rels"]);
+  const cible = {};
+  (rels.match(/<Relationship\b[^>]*>/g) || []).forEach(t => { cible[xlAttr(t, "Id")] = xlAttr(t, "Target"); });
+  const partages = [];
+  const sst = await xlTexte(blob, entrees["xl/sharedStrings.xml"]);
+  (sst.match(/<si>[\s\S]*?<\/si>/g) || []).forEach(si => {
+    let t = "";
+    (si.match(/<t\b[^>]*>[\s\S]*?<\/t>/g) || []).forEach(x => { t += x.replace(/^<t\b[^>]*>/, "").replace(/<\/t>$/, ""); });
+    partages.push(xlEntites(t));
+  });
+  const feuilles = (wb.match(/<sheet\b[^>]*>/g) || []).map(t => {
+    let chemin = cible[xlAttr(t, "r:id")] || "";
+    chemin = chemin.startsWith("/") ? chemin.slice(1) : "xl/" + chemin.replace(/^\.\//, "");
+    return {nom: xlAttr(t, "name"), cachee: (xlAttr(t, "state") || "visible") !== "visible", chemin: chemin};
+  });
+  return {
+    feuilles: feuilles,
+    lire: nom => {
+      const f = feuilles.find(x => x.nom === nom);
+      if(!f || !entrees[f.chemin]) return Promise.resolve([]);
+      return xlLireFeuille(blob, entrees[f.chemin], partages);
+    }
+  };
+}
+
+function xlCellules(contenu, partages){
+  const ligne = [];
+  const re = /<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g;
+  let m, auto = 0;
+  while((m = re.exec(contenu))){
+    const attrs = m[1], corps = m[2];
+    const r = xlAttr(attrs, "r");
+    const col = r ? xlColonne(r) : auto;
+    auto = col + 1;
+    if(!corps) continue;
+    const type = xlAttr(attrs, "t");
+    let val = "";
+    if(type === "inlineStr"){
+      (corps.match(/<t\b[^>]*>[\s\S]*?<\/t>/g) || []).forEach(x => { val += x.replace(/^<t\b[^>]*>/, "").replace(/<\/t>$/, ""); });
+      val = xlEntites(val);
+    } else {
+      const v = corps.match(/<v>([\s\S]*?)<\/v>/);
+      if(!v) continue;
+      val = type === "s" ? (partages[+v[1]] || "") : xlEntites(v[1]);
+    }
+    ligne[col] = val;
+  }
+  for(let i = 0; i < ligne.length; i++) if(ligne[i] === undefined) ligne[i] = "";
+  return ligne;
+}
+
+async function xlLireFeuille(blob, entree, partages){
+  const lecteur = (await xlFlux(blob, entree)).pipeThrough(new TextDecoderStream()).getReader();
+  const table = [];
+  let tampon = "", vides = 0, vu = false, fini = false, auto = 0;
+  while(!fini){
+    const r = await lecteur.read();
+    if(r.done) fini = true; else tampon += r.value;
+    let pos = 0;
+    for(;;){
+      const i = tampon.indexOf("<row", pos);
+      if(i < 0){ if(tampon.indexOf("</sheetData>", pos) >= 0) fini = true; break; }
+      const fb = tampon.indexOf(">", i);
+      if(fb < 0) break;
+      const ouvrant = tampon.slice(i, fb + 1);
+      const rr = xlAttr(ouvrant, "r");
+      const numero = rr ? +rr - 1 : auto;
+      auto = numero + 1;
+      let cellules = [];
+      if(tampon[fb - 1] === "/"){ pos = fb + 1; }
+      else {
+        const fin = tampon.indexOf("</row>", fb);
+        if(fin < 0) break;
+        cellules = xlCellules(tampon.slice(fb + 1, fin), partages);
+        pos = fin + 6;
+      }
+      if(cellules.some(c => c !== "")){
+        while(table.length < numero) table.push([]);
+        table[numero] = cellules;
+        vu = true; vides = 0;
+      } else if(vu && ++vides > XL_MAX_VIDES){ fini = true; break; }
+      if(numero > XL_MAX_LIGNES){ fini = true; break; }
+    }
+    tampon = tampon.slice(pos);
+    if(!fini && tampon.length > 4e6 && tampon.indexOf("<row") < 0) tampon = tampon.slice(-2000);
+  }
+  try{ await lecteur.cancel(); }catch(e){}
+  return table;
+}
+
+/* ===== reconnaissance des tableaux réseau ===== */
+
+/* --- Performance CA version Pabad --- */
+const PERF_COLS = {
+  "ca rea n-1":"caN1", "ca prev":"caPrev", "ca rea":"caRea", "effectif":"eff", "ca moyen par homme":"caHomme",
+  "creation de valeur":"cdv", "creation de valeur vs rea":"cdvRatio", "creation de valeur homme moyen":"cdvHomme",
+  "portefeuille commande acc":"portAcc", "portefeuille commande presta":"portPresta",
+  "presta rea n-1":"prN1", "presta prev":"prPrev", "presta rea":"prRea", "% synergie":"syn",
+  "nb fppec":"nbFppec", "% fppec":"txFppec", "ca presta fa n":"caFa", "tx de ca fa n":"txFa",
+  "tx mg t n-1":"txMgTN1", "tx mg t rea":"txMgT", "tx r n-1":"txRN1", "tx r rea":"txR",
+  "mg rea n-1":"mgN1", "% marge n-1":"txMgN1", "mg prev":"mgPrev", "% marge prev":"txMgPrev", "mg rea":"mgRea", "% marge":"txMg",
+  "nb fac rea n-1":"facN1", "nb fac rea":"facRea", "pmf n-1":"pmfN1", "pmf":"pmf", "ca egt":"caEgt"
+};
+const PERF_PREFIXES = [["gain synergie","gainSyn"],["gain fppec","gainFppec"],["gain fa","gainFa"],["total gain presta","gainTotal"]];
+const PERF_SOMMES = ["caN1","caPrev","caRea","eff","cdv","portAcc","portPresta","prN1","prPrev","prRea","nbFppec","caFa",
+  "mgN1","mgPrev","mgRea","facN1","facRea","caEgt","gainSyn","gainFppec","gainFa","gainTotal"];
+
+function lirePerf(feuilles, fichier){
+  const b = {type:"perf", fichier:fichier, titre:"", trimestre:"", exercice:"", sites:{}, totaux:{}};
+  // l'onglet « mag » porte tous les sites : il passe en premier
+  const ordre = feuilles.slice().sort((x, y) => (nk(y.nom) === "mag") - (nk(x.nom) === "mag"));
+  ordre.forEach(fe => {
+    let cols = null, iSite = -1;
+    fe.table.forEach((r, i) => {
+      if(i < 3 && !b.titre){
+        const t = r.map(String).find(c => /performance\s+t[1-4]\s+cumul/i.test(c));
+        if(t){
+          b.titre = t.trim();
+          const m = t.match(/performance\s+(t[1-4])\s+cumul\S*\s*-?\s*(\d{4})\D+(\d{4})/i);
+          if(m){ b.trimestre = m[1].toUpperCase(); b.exercice = m[2] + "-" + m[3]; }
+        }
+      }
+      const n = r.map(nk);
+      if(n.includes("site") && n.includes("ca rea n-1")){
+        cols = {}; iSite = n.indexOf("site");
+        n.forEach((h, c) => {
+          let k = PERF_COLS[h];
+          if(!k){ const p = PERF_PREFIXES.find(x => h.startsWith(x[0])); if(p) k = p[1]; }
+          if(k && !(k in cols)) cols[k] = c;
+        });
+        return;
+      }
+      if(!cols) return;
+      const site = String(r[iSite] || "").trim();
+      if(!site) return;
+      const v = {};
+      Object.keys(cols).forEach(k => v[k] = nombre(r[cols[k]]));
+      if(v.caRea === null && v.caN1 === null) return;
+      const statut = String(r[iSite-1] || "").trim().toUpperCase();
+      if(/^total\b/i.test(site)){
+        const cle = (String(r[iSite+1] || "").trim() || site.replace(/^total/i, "")).trim().toUpperCase();
+        if(["F","I","I+F","S2"].includes(cle) && (!b.totaux[cle] || (v.caRea || 0) > (b.totaux[cle].caRea || 0))) b.totaux[cle] = v;
+        return;
+      }
+      const cd = codeSite(site);
+      if(cd && ["I","F","S2"].includes(statut) && !b.sites[cd])
+        b.sites[cd] = {code:cd, site:site, tribu:String(r[iSite-2] || "").trim(), statut:statut, v:v};
+    });
+  });
+  return Object.keys(b.sites).length ? b : null;
+}
+
+/* agrégat d'une liste de sites : sommes, puis ratios recalculés */
+function agregatPerf(liste){
+  if(!liste.length) return null;
+  const v = {};
+  PERF_SOMMES.forEach(k => {
+    const vals = liste.map(s => s.v[k]).filter(x => x !== null && x !== undefined);
+    v[k] = vals.length ? vals.reduce((a, c) => a + c, 0) : null;
+  });
+  const pond = (k, poids) => {
+    let num = 0, den = 0;
+    liste.forEach(s => { if(s.v[k] !== null && s.v[k] !== undefined && s.v[poids]){ num += s.v[k] * s.v[poids]; den += s.v[poids]; } });
+    return den ? num/den : null;
+  };
+  v.txMg = div(v.mgRea, v.caRea); v.txMgN1 = div(v.mgN1, v.caN1); v.txMgPrev = div(v.mgPrev, v.caPrev);
+  v.syn = div(v.prRea, v.caRea); v.txFa = div(v.caFa, v.prRea);
+  v.pmf = div(v.caRea, v.facRea); v.pmfN1 = div(v.caN1, v.facN1);
+  v.caHomme = div(v.caRea, v.eff); v.cdvRatio = div(v.cdv, v.caRea);
+  v.txMgT = pond("txMgT","caRea"); v.txMgTN1 = pond("txMgTN1","caN1");
+  v.txR = pond("txR","caRea"); v.txRN1 = pond("txRN1","caN1");
+  v.txFppec = pond("txFppec","prRea");
+  return v;
+}
+
+/* --- PMCA 12 mois glissants --- */
+const PMCA_TYPES = ["TOUS","CFD","Z","AUTRES","NQ"];
+const PMCA_LIB = {TOUS:"Tous clients", CFD:"CFD", Z:"Z", AUTRES:"AUTRES", NQ:"NON QUAL"};
+function typePmca(g){
+  if(/non qual/.test(g)) return "NQ";
+  if(/autres/.test(g)) return "AUTRES";
+  if(/(^|\s)z(\s|$)/.test(g)) return "Z";
+  if(/cdf|cfd|c f d/.test(g)) return "CFD";
+  if(/tous clients|tous type/.test(g)) return "TOUS";
+  return null;
+}
+function perimetrePmca(g){
+  if(/hors dept/.test(g)) return "HD";
+  if(/tous dept/.test(g)) return "T";
+  if(/dept/.test(g)) return "D";
+  return null;
+}
+function metriquePmca(h){
+  if(/^nb client dept ?\/ ?nb client total/.test(h)) return "partDept";
+  if(/^nb clients( |$)/.test(h)) return "nbCli";
+  if(/^nb factures( |$)/.test(h)) return "nbFac";
+  if(/^pmca( |$)/.test(h)) return "pmca";
+  if(/^rang i\+f( |$)/.test(h)) return "rang";
+  if(/^frequence d achat( |$)/.test(h)) return "freq";
+  if(/^pmf( |$)/.test(h)) return "pmf";
+  if(/^% marge( |$)/.test(h)) return "txMg";
+  if(/^marge( |$)/.test(h)) return "mg";
+  if(/^ca( |$)/.test(h)) return "ca";
+  return null;
+}
+function deduireHorsDept(m){
+  Object.keys(m).forEach(typ => {
+    const T = m[typ].T, D = m[typ].D;
+    if(!T || !D || m[typ].HD) return;
+    const moins = k => (fini(T[k]) !== null && fini(D[k]) !== null) ? T[k] - D[k] : null;
+    const h = {nbCli:moins("nbCli"), nbFac:moins("nbFac"), ca:moins("ca"), mg:moins("mg")};
+    h.pmca = div(h.ca, h.nbCli); h.freq = div(h.nbFac, h.nbCli); h.pmf = div(h.ca, h.nbFac); h.txMg = div(h.mg, h.ca);
+    h.rang = null; h.deduit = true;
+    m[typ].HD = h;
+  });
+}
+function lirePmca(feuilles, fichier){
+  const b = {type:"pmca", fichier:fichier, saisons:{}};
+  feuilles.forEach(fe => {
+    const t = fe.table;
+    let h = -1;
+    for(let i = 0; i < Math.min(t.length, 6); i++){
+      const n = (t[i] || []).map(nk);
+      if(n.includes("nb clients dept") && n.includes("rang i+f")){ h = i; break; }
+    }
+    if(h < 1) return;
+    const titre = (t[h-1] || []).map(String).find(c => /saison/i.test(c)) || "";
+    const ms = titre.match(/(\d{4})\s*-\s*(\d{4})/);
+    if(!ms) return;
+    const saison = ms[1] + "-" + ms[2];
+    if(b.saisons[saison]) return;
+    // les groupes (type de client, périmètre) sont en cellules fusionnées sur la ligne du dessus
+    const larg = Math.max((t[h] || []).length, (t[h-1] || []).length);
+    let cour = "";
+    const cols = [];
+    for(let c = 0; c < larg; c++){
+      const g = String((t[h-1] || [])[c] || "").trim();
+      if(g && g !== "-") cour = nk(g);
+      if(c < 6) continue;
+      const met = metriquePmca(nk((t[h] || [])[c])), typ = typePmca(cour), per = perimetrePmca(cour);
+      if(met && typ && per) cols.push({c:c, met:met, typ:typ, per:per});
+    }
+    const lireM = r => {
+      const m = {};
+      cols.forEach(x => {
+        const v = nombre(r[x.c]);
+        m[x.typ] = m[x.typ] || {};
+        m[x.typ][x.per] = m[x.typ][x.per] || {};
+        m[x.typ][x.per][x.met] = v;
+      });
+      deduireHorsDept(m);
+      return m;
+    };
+    const s = {sites:{}, totaux:{}, groupes:{}};
+    t.slice(h + 1).forEach(r => {
+      if(!r || !r.length) return;
+      const a = String(r[0] || "").trim().toUpperCase(), site = String(r[2] || "").trim();
+      if(!site) return;
+      const cd = codeSite(site);
+      if(cd && ["I","F","S2"].includes(a)){
+        if(!s.sites[cd]) s.sites[cd] = {code:cd, site:site, statut:a, tribu:String(r[1] || "").trim(),
+          groupement:String(r[3] || "").trim(), dept:String(r[4] || "").trim(), m:lireM(r)};
+        return;
+      }
+      const cs = nk(site);
+      if(/^total/.test(cs)){
+        const cle = /franchis/.test(cs) ? "F" : /integr/.test(cs) ? "I" : /s2/.test(cs) ? "S2" : "TOUT";
+        if(!s.totaux[cle]) s.totaux[cle] = lireM(r);
+        return;
+      }
+      if(!String(r[0] || "").trim() && !String(r[1] || "").trim() && !s.groupes[cs]) s.groupes[cs] = lireM(r);
+    });
+    if(Object.keys(s.sites).length) b.saisons[saison] = s;
+  });
+  return Object.keys(b.saisons).length ? b : null;
+}
+
+/* --- Synthèse client --- */
+const CLI_COLS = {
+  "reseau":"reseau", "tribu":"tribu", "site":"site",
+  "ca fact n-3":"caN3", "ca fact n-2":"caN2", "ca fact n-1":"caN1", "ca fact n":"caN",
+  "dont ca n nb nveau client n":"caNouv", "nb client n":"nbCli", "dont nb nveau client n":"nbNouv",
+  "ratio nb de nveau client n":"ratioNouv", "nb fact n":"nbFac", "dont nb fact nveau client n":"nbFacNouv",
+  "ratio nb de fact nveau client n":"ratioFacNouv", "pmf n":"pmf", "pmf n nb nveau client n":"pmfNouv",
+  "% evol du pmf nveau client n":"evolPmfNouv", "signe n total":"signe", "nb signe n total":"nbSigne",
+  "signe/total fact n":"txSigne", "portefeuille":"port", "nb portefeuille":"nbPort", "pmc rea":"pmc",
+  "% client qui ne sont pas revenu":"nonRevenus"
+};
+const CLI_SOMMES = ["caN3","caN2","caN1","caN","caNouv","nbCli","nbNouv","nbFac","nbFacNouv","signe","nbSigne","port","nbPort"];
+
+function derivesClients(v){
+  v.partCaNouv = div(v.caNouv, v.caN);
+  v.pmcNouv = div(v.caNouv, v.nbNouv);
+  v.pmcConnus = (v.caN !== null && v.caNouv !== null && v.nbCli !== null && v.nbNouv !== null) ? div(v.caN - v.caNouv, v.nbCli - v.nbNouv) : null;
+  v.portSurCa = div(v.port, v.caN);
+  return v;
+}
+function lireClients(feuilles, fichier){
+  const b = {type:"clients", fichier:fichier, date:"", sites:{}, colonneSuspecte:false};
+  const visibles = feuilles.filter(f => !f.cachee);
+  (visibles.length ? visibles : feuilles).forEach(fe => {
+    if(Object.keys(b.sites).length) return;
+    let cols = null;
+    fe.table.forEach((r, i) => {
+      if(i < 4 && !b.date){
+        const t = r.map(String).find(c => /synth.se client au/i.test(c));
+        const m = t && t.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+        if(m) b.date = m[3] + "-" + m[2] + "-" + m[1];
+      }
+      const n = r.map(nk);
+      if(n.includes("site") && n.includes("nb client n")){
+        cols = {};
+        n.forEach((h, c) => { const k = CLI_COLS[h]; if(k && !(k in cols)) cols[k] = c; });
+        return;
+      }
+      if(!cols) return;
+      const site = String(r[cols.site] || "").trim(), cd = codeSite(site);
+      if(!cd) return;
+      const v = {};
+      Object.keys(cols).forEach(k => { if(!["reseau","tribu","site"].includes(k)) v[k] = nombre(r[cols[k]]); });
+      if(v.caN === null) return;
+      const res = nk(r[cols.reseau]);
+      if(!b.sites[cd]) b.sites[cd] = {code:cd, site:site, tribu:String(r[cols.tribu] || "").trim(),
+        statut: /franchis/.test(res) ? "F" : (/integr/.test(res) ? "I" : "?"), v:derivesClients(v)};
+    });
+  });
+  const liste = Object.values(b.sites);
+  // « % Client qui ne sont pas revenu » recopie le ratio de nouveaux clients sur toutes les lignes
+  b.colonneSuspecte = liste.length > 3 && liste.every(s => s.v.nonRevenus !== null && s.v.ratioNouv !== null &&
+    Math.abs(s.v.nonRevenus - s.v.ratioNouv) < 1e-9);
+  return liste.length ? b : null;
+}
+function agregatClients(liste){
+  if(!liste.length) return null;
+  const v = {};
+  CLI_SOMMES.forEach(k => {
+    const vals = liste.map(s => s.v[k]).filter(x => x !== null && x !== undefined);
+    v[k] = vals.length ? vals.reduce((a, c) => a + c, 0) : null;
+  });
+  v.ratioNouv = div(v.nbNouv, v.nbCli); v.ratioFacNouv = div(v.nbFacNouv, v.nbFac);
+  v.pmf = div(v.caN, v.nbFac); v.pmfNouv = div(v.caNouv, v.nbFacNouv);
+  v.evolPmfNouv = (v.pmfNouv !== null && v.pmf) ? v.pmfNouv/v.pmf - 1 : null;
+  v.txSigne = div(v.signe, v.caN); v.pmc = div(v.caN, v.nbCli); v.nonRevenus = null;
+  return derivesClients(v);
+}
+
+/* ===== import ===== */
+async function feuillesDuFichier(f){
+  const cl = await ouvrirClasseur(f);
+  const out = [];
+  for(const fe of cl.feuilles){
+    if(fe.cachee) continue;
+    out.push({nom:fe.nom, cachee:false, table: await cl.lire(fe.nom)});
+  }
+  return out;
+}
+
+async function importer(input, zone){
+  const fichiers = [...(input.files || [])];
+  if(!fichiers.length) return;
+  const et = document.getElementById("etat_" + zone);
+  et.className = "etat sousimp"; et.textContent = "Lecture de " + fichiers.map(f => f.name).join(", ") + "…";
+  const msg = [];
+  let ok = 0;
+  for(const f of fichiers){
+    try{
+      const feuilles = await feuillesDuFichier(f);
+      const perf = lirePerf(feuilles, f.name);
+      const pmca = perf ? null : lirePmca(feuilles, f.name);
+      const cli = (perf || pmca) ? null : lireClients(feuilles, f.name);
+      if(perf){
+        E.base.perf = perf; ok++;
+        if(perf.trimestre) E.trimestre = perf.trimestre;
+        if(perf.exercice) E.exercice = perf.exercice;
+        msg.push(f.name + " : Performance " + (perf.trimestre ? perf.trimestre + " cumulé " + perf.exercice : "") + ", " +
+          Object.keys(perf.sites).length + " sites dont " + Object.values(perf.sites).filter(s => s.statut === "F").length + " franchisés");
+        document.getElementById("etat_perf").textContent = msg[msg.length-1];
+      } else if(pmca){
+        const saisons = Object.keys(pmca.saisons).sort();
+        // un fichier PMCA qui n'apporte qu'une saison complète celui déjà en place
+        if(E.base.pmca && saisons.length === 1) Object.assign(E.base.pmca.saisons, pmca.saisons);
+        else E.base.pmca = pmca;
+        ok++;
+        msg.push(f.name + " : PMCA 12 mois glissants, saisons " + Object.keys(E.base.pmca.saisons).sort().join(" et "));
+        document.getElementById("etat_pmca").textContent = msg[msg.length-1];
+      } else if(cli){
+        E.base.clients = cli; ok++;
+        msg.push(f.name + " : Synthèse client" + (cli.date ? " au " + dateFr(cli.date) : "") + ", " + Object.keys(cli.sites).length + " sites");
+        document.getElementById("etat_clients").textContent = msg[msg.length-1];
+      } else {
+        msg.push(f.name + " : tableau non reconnu (attendu : Performance CA, PMCA 12 mois glissants ou Synthèse client)");
+      }
+    }catch(err){
+      msg.push(f.name + " non lu : " + err.message);
+    }
+  }
+  input.value = "";
+  et.className = "etat sousimp " + (ok === fichiers.length ? "ok" : "ko");
+  et.textContent = msg.join(" · ");
+  if(zone !== "cadre"){
+    const c = document.getElementById("etat_cadre");
+    c.className = "etat sousimp"; c.textContent = messageSources();
+  }
+  remplirMagasins();
+  if(!E.magasin){
+    const liste = listeMagasins().filter(m => m.statut === "F");
+    if(liste.length === 1) E.magasin = liste[0].libelle;
+  }
+  remplirChamps(); toutCalculer(); rendrePA(); sauver();
+}
+
+function messageSources(){
+  const b = E.base, out = [];
+  if(b.perf) out.push("Performance " + (b.perf.trimestre || "") + " " + (b.perf.exercice || ""));
+  if(b.pmca) out.push("PMCA " + Object.keys(b.pmca.saisons).sort().join(" / "));
+  if(b.clients) out.push("Synthèse client" + (b.clients.date ? " au " + dateFr(b.clients.date) : ""));
+  return out.length ? "En place : " + out.join(", ") + "." : "Aucun tableau importé.";
+}
+
+/* ===== magasin choisi ===== */
+function listeMagasins(){
+  const vus = {};
+  const ajout = s => { if(s && !vus[s.code]) vus[s.code] = {code:s.code, libelle:s.site, statut:s.statut}; };
+  const b = E.base;
+  if(b.perf) Object.values(b.perf.sites).forEach(ajout);
+  if(b.clients) Object.values(b.clients.sites).forEach(ajout);
+  if(b.pmca) Object.values(b.pmca.saisons).forEach(sa => Object.values(sa.sites).forEach(ajout));
+  return Object.values(vus).sort((a, c) => (a.statut === "F" ? 0 : 1) - (c.statut === "F" ? 0 : 1) || a.code.localeCompare(c.code));
+}
+function remplirMagasins(){
+  document.getElementById("listeMag").innerHTML = listeMagasins()
+    .map(m => "<option value='" + esc(m.libelle) + "'>" + esc(m.statut === "F" ? "Franchisé" : m.statut === "I" ? "Intégré" : m.statut) + "</option>").join("");
+}
+function codeMagasin(){
+  const s = String(E.magasin || "").trim();
+  if(!s) return "";
+  const c = codeSite(s);
+  if(c) return c;
+  const cible = nk(s);
+  const trouve = listeMagasins().find(m => m.code.toLowerCase() === cible || nk(m.libelle).includes(cible));
+  return trouve ? trouve.code : s.toUpperCase();
+}
+
+/* ===== indicateurs affichés =====
+   n1 / prev / real : lecture d'une valeur dans l'objet du magasin (ou du réseau).
+   sens -1 : plus bas vaut mieux. rang:false : pas de classement. */
+const PERF_ACC = [
+  {k:"caAcc",   nom:"CA accessoires",       fmt:"eur",  n1:v => Z(v.caN1),   prev:v => Z(v.caPrev), real:v => v.caRea},
+  {k:"mg",      nom:"Marge",                fmt:"eur",  n1:v => Z(v.mgN1),   prev:v => Z(v.mgPrev), real:v => v.mgRea},
+  {k:"txMg",    nom:"% Marge",              fmt:"pct",  n1:v => Z(v.caN1) === null ? null : v.txMgN1, prev:v => Z(v.mgPrev) === null ? null : v.txMgPrev, real:v => v.txMg},
+  {k:"txMgT",   nom:"Tx Mg T",              fmt:"pct",  n1:v => Z(v.caN1) === null ? null : v.txMgTN1, real:v => v.txMgT},
+  {k:"txR",     nom:"Tx R",                 fmt:"pct",  n1:v => Z(v.caN1) === null ? null : v.txRN1,   real:v => v.txR, sens:-1},
+  {k:"fac",     nom:"Nb factures",          fmt:"ent",  n1:v => Z(v.facN1),  real:v => v.facRea},
+  {k:"pmf",     nom:"PMF",                  fmt:"eur2", n1:v => Z(v.pmfN1),  real:v => v.pmf},
+  {k:"caHomme", nom:"CA moyen par homme",   fmt:"eur",  real:v => v.caHomme},
+  {k:"eff",     nom:"Effectif",             fmt:"dec1", real:v => v.eff, rang:false, moyenne:true, sens:0},
+  {k:"cdv",     nom:"Création de valeur vs réa", fmt:"pct", real:v => v.cdvRatio},
+  {k:"portAcc", nom:"Portefeuille commande ACC", fmt:"eur", real:v => v.portAcc, moyenne:true},
+  {k:"caEgt",   nom:"CA EGT",               fmt:"eur",  real:v => v.caEgt, moyenne:true, pasEcart:true}
+];
+const PERF_PRESTA = [
+  {k:"presta",  nom:"CA presta",            fmt:"eur",  n1:v => Z(v.prN1), prev:v => Z(v.prPrev), real:v => v.prRea},
+  {k:"syn",     nom:"% Synergie",           fmt:"pct",  real:v => v.syn, niveau:true},
+  {k:"fppec",   nom:"% FPPEC",              fmt:"pct",  real:v => v.txFppec, niveau:true},
+  {k:"nbFppec", nom:"Nb FPPEC",             fmt:"ent",  real:v => v.nbFppec, moyenne:true},
+  {k:"txFa",    nom:"Tx de CA FA",          fmt:"pct",  real:v => v.txFa, niveau:true},
+  {k:"portPresta", nom:"Portefeuille commande presta", fmt:"eur", real:v => v.portPresta, moyenne:true}
+];
+const PERF_GAINS = [
+  {k:"gainSyn",   nom:"Gain synergie",   aide:"au % synergie du réseau I"},
+  {k:"gainFppec", nom:"Gain FPPEC",      aide:"au % FPPEC du réseau I"},
+  {k:"gainFa",    nom:"Gain FA",         aide:"à un Tx de FA de 4,5 %"},
+  {k:"gainTotal", nom:"Total gain presta", aide:""}
+];
+
+function pm(x, p, typ, per, met){
+  return (x && x[p] && x[p][typ] && x[p][typ][per]) ? fini(x[p][typ][per][met]) : null;
+}
+function lignePmca(k, nom, fmt, met, opts){
+  return Object.assign({k:k, nom:nom, fmt:fmt,
+    n1:v => pm(v,"N1","TOUS","T",met), real:v => pm(v,"N","TOUS","T",met)}, opts || {});
+}
+const PMCA_LIGNES = [
+  lignePmca("pmca", "PMCA", "eur2", "pmca"),
+  lignePmca("nbCli", "Nb clients", "ent", "nbCli"),
+  lignePmca("nbFac", "Nb factures", "ent", "nbFac"),
+  lignePmca("freq", "Fréquence d'achat", "dec2", "freq"),
+  lignePmca("pmf", "PMF", "eur2", "pmf"),
+  lignePmca("ca", "CA 12 mois glissants", "eur", "ca"),
+  lignePmca("txMg", "% Marge", "pct", "txMg"),
+  lignePmca("rang", "Rang I+F sur le PMCA", "rang", "rang", {type:"rang", rang:false})
+];
+const CLIENTS_LIGNES = [
+  {k:"caN",        nom:"CA Fact exercice",           fmt:"eur",  n1:v => Z(v.caN1), real:v => v.caN},
+  {k:"nbCli",      nom:"Nb clients",                 fmt:"ent",  real:v => v.nbCli, moyenne:true},
+  {k:"ratioNouv",  nom:"Part de nouveaux clients",   fmt:"pct",  real:v => v.ratioNouv, niveau:true},
+  {k:"partCaNouv", nom:"Part du CA des nouveaux clients", fmt:"pct", real:v => v.partCaNouv, niveau:true},
+  {k:"pmc",        nom:"PMC Réa",                    fmt:"eur2", real:v => v.pmc},
+  {k:"pmcNouv",    nom:"PMC nouveaux clients",       fmt:"eur2", real:v => v.pmcNouv},
+  {k:"pmcConnus",  nom:"PMC clients déjà connus",    fmt:"eur2", real:v => v.pmcConnus},
+  {k:"nbFac",      nom:"Nb factures",                fmt:"ent",  real:v => v.nbFac, moyenne:true},
+  {k:"pmf",        nom:"PMF",                        fmt:"eur2", real:v => v.pmf},
+  {k:"evolPmfNouv",nom:"PMF nouveaux clients / PMF", fmt:"pct",  real:v => v.evolPmfNouv, niveau:true},
+  {k:"txSigne",    nom:"Signé / Total fact",         fmt:"pct",  real:v => v.txSigne, niveau:true},
+  {k:"port",       nom:"Portefeuille",               fmt:"eur",  real:v => v.port, moyenne:true},
+  {k:"portSurCa",  nom:"Portefeuille / CA",          fmt:"pct",  real:v => v.portSurCa, niveau:true}
+];
+
+/* ===== contexte du magasin choisi ===== */
+function saisonsPmca(){
+  const b = E.base.pmca;
+  if(!b) return null;
+  const cles = Object.keys(b.saisons).sort();
+  return {N: b.saisons[cles[cles.length-1]], N1: cles.length > 1 ? b.saisons[cles[cles.length-2]] : null,
+          libN: cles[cles.length-1], libN1: cles.length > 1 ? cles[cles.length-2] : ""};
+}
+function libTribu(t){ const s = String(t || "").trim(); return /^tribu\s/i.test(s) ? "Tribu " + s.replace(/^tribu\s+/i, "") : "Tribu " + s; }
+function libStatut(st, pluriel){
+  const l = {F:["franchisé","franchisés"], I:["intégré","intégrés"], S2:["S2","S2"]}[st];
+  return l ? l[pluriel ? 1 : 0] : st;
+}
+function contexte(){
+  const code = codeMagasin(), b = E.base, ctx = {code:code};
+  if(!code) return ctx;
+  if(b.perf && b.perf.sites[code]){
+    const s = b.perf.sites[code];
+    const pairs = Object.values(b.perf.sites).filter(x => x.statut === s.statut);
+    const tribu = Object.values(b.perf.sites).filter(x => x.tribu === s.tribu && x.statut !== "S2");
+    ctx.perf = {s:s, v:s.v, pairs:pairs.map(x => x.v), statut:s.statut,
+      refs:[{nom:"Réseau " + s.statut, v:b.perf.totaux[s.statut] || agregatPerf(pairs), n:pairs.length},
+            {nom:"Tribu " + s.tribu, v:agregatPerf(tribu), n:tribu.length}]};
+  }
+  const sp = saisonsPmca();
+  if(sp && sp.N.sites[code]){
+    const s = sp.N.sites[code];
+    const comp = c => ({N: sp.N.sites[c] ? sp.N.sites[c].m : null, N1: sp.N1 && sp.N1.sites[c] ? sp.N1.sites[c].m : null});
+    const tot = k => ({N: sp.N.totaux[k] || null, N1: sp.N1 ? sp.N1.totaux[k] || null : null});
+    const grp = nom => ({N: sp.N.groupes[nk(nom)] || null, N1: sp.N1 ? sp.N1.groupes[nk(nom)] || null : null});
+    const refs = [{nom:"Réseau " + s.statut, v:tot(s.statut), n:Object.values(sp.N.sites).filter(x => x.statut === s.statut).length}];
+    if(s.tribu && sp.N.groupes[nk(s.tribu)]) refs.push({nom:libTribu(s.tribu), v:grp(s.tribu)});
+    if(s.groupement && sp.N.groupes[nk(s.groupement)] && nk(s.groupement) !== nk(s.tribu)) refs.push({nom:"Groupement " + s.groupement, v:grp(s.groupement)});
+    ctx.pmca = {s:s, v:comp(code), statut:s.statut, sp:sp, refs:refs,
+      pairs:Object.values(sp.N.sites).filter(x => x.statut === s.statut).map(x => comp(x.code))};
+  }
+  if(b.clients && b.clients.sites[code]){
+    const s = b.clients.sites[code];
+    const pairs = Object.values(b.clients.sites).filter(x => x.statut === s.statut);
+    const tribu = Object.values(b.clients.sites).filter(x => x.tribu === s.tribu);
+    ctx.clients = {s:s, v:s.v, statut:s.statut, pairs:pairs.map(x => x.v), pairsSites:pairs,
+      refs:[{nom:"Réseau " + s.statut, v:agregatClients(pairs), n:pairs.length}, {nom:libTribu(s.tribu), v:agregatClients(tribu), n:tribu.length}]};
+  }
+  return ctx;
+}
+
+/* ===== calcul d'une ligne : magasin, références, rang ===== */
+function evalLigne(d, v, refs, pairs){
+  const g = (fn, x) => (fn && x) ? fini(fn(x)) : null;
+  const o = {d:d, n1:g(d.n1, v), prev:g(d.prev, v), real:g(d.real, v)};
+  const evol = x => d.n1 ? variation(d.fmt, g(d.real, x), g(d.n1, x)) : null;
+  o.dN = d.n1 ? variation(d.fmt, o.real, o.n1) : null;
+  o.dP = d.prev ? variation(d.fmt, o.real, o.prev) : null;
+  if(d.type === "rang") o.dN = (o.n1 !== null && o.real !== null) ? o.n1 - o.real : null;
+  o.refs = (refs || []).map(r => {
+    let val = g(d.real, r.v);
+    if(d.moyenne && val !== null) val = r.n ? val / r.n : null;
+    const ev = d.type === "rang" ? null : evol(r.v);
+    let ecart = null;
+    if(!d.pasEcart && d.type !== "rang"){
+      if(d.n1 && !d.niveau){ if(o.dN !== null && ev !== null) ecart = o.dN - ev; }
+      else if(o.real !== null && val !== null) ecart = estTaux(d.fmt) ? o.real - val : variation(d.fmt, o.real, val);
+    }
+    return {nom:r.nom, val:val, ev:ev, ecart:ecart};
+  });
+  if(d.rang !== false && d.type !== "rang" && pairs && pairs.length){
+    const mesure = x => (d.n1 && !d.niveau) ? evol(x) : g(d.real, x);
+    const m0 = (d.n1 && !d.niveau) ? o.dN : o.real;
+    if(m0 !== null){
+      const vals = pairs.map(mesure).filter(x => x !== null);
+      const sens = d.sens || 1;
+      o.rang = 1 + vals.filter(x => sens*x > sens*m0 + 1e-9).length;
+      o.nb = vals.length;
+    }
+  }
+  return o;
+}
+function lignes(desc, c){ return c ? desc.map(d => evalLigne(d, c.v, c.refs, c.pairs)) : []; }
+function trouver(liste, k){ return liste.find(o => o.d.k === k) || null; }
+
+/* ===== rendu ===== */
+function cellule(t, cl, titre){
+  return "<td" + (cl ? " class='" + cl + "'" : "") + (titre ? " title='" + esc(titre) + "'" : "") + ">" + t + "</td>";
+}
+function fmtEvolCell(o){
+  if(o.d.type === "rang") return o.dN === null ? "—" : (o.dN > 0 ? "+" : "") + o.dN + " place" + (Math.abs(o.dN) > 1 ? "s" : "");
+  return fmtVar(o.d.fmt, o.dN);
+}
+function classeEvol(d, e){ return classe(e, seuilsEvol(d.fmt)[0], d.sens); }
+function valeurRef(o, r){
+  const d = o.d;
+  if(d.type === "rang") return "—";
+  return (d.n1 && !d.niveau) ? fmtVar(d.fmt, r.ev) : fmt(r.val, d.fmt);
+}
+function texteEcart(o, e){
+  if(e === null) return "—";
+  return (o.d.n1 && !o.d.niveau) || estTaux(o.d.fmt) ? fmtPts(e) : fmtPct(e);
+}
+function classeEcart(o, e){
+  const s = (o.d.n1 && !o.d.niveau) ? seuilsEvol(o.d.fmt)[0] : seuilsEcart(o.d.fmt)[0];
+  return classe(e, s, o.d.sens);
+}
+function tableComparee(liste, opts){
+  if(!liste.length) return "";
+  const o0 = liste[0];
+  const avecPrev = liste.some(o => o.d.prev);
+  const avecN1 = liste.some(o => o.d.n1);
+  let h = "<div class='enrobe'><table class='tb'><thead><tr><th>Indicateur</th>";
+  if(avecN1) h += "<th>N-1</th>";
+  if(avecPrev) h += "<th>Prév</th>";
+  h += "<th>" + (opts && opts.libReal || "Réalisé") + "</th>";
+  if(avecPrev) h += "<th>Δ Prév</th>";
+  if(avecN1) h += "<th>Δ N-1</th>";
+  o0.refs.forEach((r, i) => {
+    h += "<th title='Évolution sur N-1, ou valeur quand l’indicateur n’a pas de N-1'>" + esc(r.nom) + "</th>";
+    if(i === 0) h += "<th title='Écart du magasin à cette référence (moyenne par magasin pour les volumes)'>Écart</th>";
+  });
+  h += "<th title='Classement parmi les magasins du même réseau'>Rang</th></tr></thead><tbody>";
+  liste.forEach(o => {
+    const d = o.d;
+    h += "<tr><td>" + esc(d.nom) + "</td>";
+    if(avecN1) h += cellule(d.n1 ? fmt(o.n1, d.fmt) : "", "");
+    if(avecPrev) h += cellule(d.prev ? fmt(o.prev, d.fmt) : "", "");
+    h += cellule("<b>" + fmt(o.real, d.fmt) + "</b>");
+    if(avecPrev) h += cellule(d.prev ? fmtVar(d.fmt, o.dP) : "", "d " + classeEvol(d, o.dP));
+    if(avecN1) h += cellule(d.n1 ? fmtEvolCell(o) : "", "d " + (d.type === "rang" ? classe(o.dN, 1, 1) : classeEvol(d, o.dN)));
+    o.refs.forEach((r, i) => {
+      h += cellule(valeurRef(o, r), "sec");
+      if(i === 0) h += cellule(texteEcart(o, r.ecart), "d " + classeEcart(o, r.ecart));
+    });
+    h += cellule(o.rang ? o.rang + "<span class='second'>/" + o.nb + "</span>" : "—", "sec");
+    h += "</tr>";
+  });
+  return h + "</tbody></table></div>";
+}
+function tableSimple(entetes, lignesT){
+  let h = "<div class='enrobe'><table class='tb'><thead><tr>" + entetes.map(e => "<th>" + esc(e) + "</th>").join("") + "</tr></thead><tbody>";
+  lignesT.forEach(r => {
+    h += "<tr>" + r.map(c => (c && typeof c === "object") ? cellule(c.t, c.cl) : cellule(c)).join("") + "</tr>";
+  });
+  return h + "</tbody></table></div>";
+}
+function barre(e, echelle){
+  if(e === null || e === undefined) return "";
+  const w = Math.min(Math.abs(e)/(echelle || 0.2), 1) * 50;
+  const cl = e > 0 ? "pos" : e < 0 ? "neg" : "";
+  return "<span class='barreD' aria-hidden='true'><i class='" + cl + "' style='" + (e >= 0 ? "left:50%" : "right:50%") + ";width:" + w.toFixed(1) + "%'></i></span>";
+}
+function vide(t){ return "<p class='vide'>" + esc(t) + "</p>"; }
+function absent(nomTableau, c){
+  if(!E.magasin) return vide("Choisissez le magasin dans l'en-tête.");
+  if(!c) return vide("Magasin « " + E.magasin + " » absent du tableau " + nomTableau + ".");
+  return "";
+}
+
+/* --- partie 1 --- */
+function rendrePerf(ctx){
+  const z = document.getElementById("corps_perf");
+  if(!E.base.perf){ z.innerHTML = vide("Importez le tableau Performance CA version Pabad."); return; }
+  const c = ctx.perf;
+  if(!c){ z.innerHTML = absent("Performance", c); return; }
+  const titre = (E.base.perf.trimestre ? E.base.perf.trimestre + " cumulé " + E.base.perf.exercice : "Cumul exercice");
+  z.innerHTML = "<p class='sous'>" + esc(c.s.site) + ", " + libStatut(c.statut) + ", " + esc(libTribu(c.s.tribu)) + ". " + esc(titre) +
+      ". Rang calculé parmi les " + c.pairs.length + " " + libStatut(c.statut, true) + ". Pour les volumes (effectif, portefeuilles, CA EGT…), les références sont des moyennes par magasin.</p>" +
+    "<h3 class='sousTitre'>Accessoires</h3>" + tableComparee(lignes(PERF_ACC, c)) +
+    "<h3 class='sousTitre'>Prestation</h3>" + tableComparee(lignes(PERF_PRESTA, c));
+}
+
+/* --- partie 2 --- */
+function partPmca(x, p, typ, per){
+  return div(pm(x, p, typ, per, "nbCli"), pm(x, p, "TOUS", "T", "nbCli"));
+}
+function partCaPmca(x, p, typ){ return div(pm(x, p, typ, "T", "ca"), pm(x, p, "TOUS", "T", "ca")); }
+function rendrePmca(ctx){
+  const z = document.getElementById("corps_pmca");
+  if(!E.base.pmca){ z.innerHTML = vide("Importez le tableau PMCA 12 mois glissants."); return; }
+  const c = ctx.pmca;
+  if(!c){ z.innerHTML = absent("PMCA", c); return; }
+  const R = c.refs[0].v, v = c.v, sp = c.sp;
+  let h = "<p class='sous'>" + esc(c.s.site) + ", groupement " + esc(c.s.groupement || "—") + ", département " + esc(c.s.dept || "—") +
+    ". Saison " + esc(sp.libN) + (sp.libN1 ? " contre " + esc(sp.libN1) : "") + ", 12 mois glissants.</p>";
+  h += "<h3 class='sousTitre'>Tous clients</h3>" + tableComparee(lignes(PMCA_LIGNES, c), {libReal:"N"});
+
+  const typeLignes = PMCA_TYPES.filter(t => t !== "TOUS").map(t => {
+    const pN = partPmca(v,"N",t,"T"), pN1 = partPmca(v,"N1",t,"T"), dp = pN !== null && pN1 !== null ? pN - pN1 : null;
+    const pmN = pm(v,"N",t,"T","pmca"), pmN1 = pm(v,"N1",t,"T","pmca");
+    return [PMCA_LIB[t], fmt(pm(v,"N",t,"T","nbCli"),"ent"), fmt(pN,"pct"), fmt(pN1,"pct"),
+      {t:fmtPts(dp), cl:"d " + classe(dp, S_VIGIL_PT, t === "NQ" ? -1 : 1)}, {t:fmt(partPmca(R,"N",t,"T"),"pct"), cl:"sec"},
+      fmt(pmN,"eur2"), {t:fmtPct(variation("eur", pmN, pmN1)), cl:"d " + classe(variation("eur", pmN, pmN1), S_VIGIL)},
+      fmt(pm(v,"N",t,"T","freq"),"dec2"), fmt(partCaPmca(v,"N",t),"pct")];
+  });
+  h += "<h3 class='sousTitre'>Mix clientèle</h3>" + tableSimple(
+    ["Type de client","Nb clients","Part N","Part N-1","Δ part","Part réseau " + c.statut,"PMCA","Δ PMCA N-1","Fréquence","Part du CA"], typeLignes);
+
+  const deptLignes = [["D","Département d'origine"],["HD","Hors département"]].map(([per, lib]) => {
+    const pN = partPmca(v,"N","TOUS",per), pN1 = partPmca(v,"N1","TOUS",per), dp = pN !== null && pN1 !== null ? pN - pN1 : null;
+    const pmN = pm(v,"N","TOUS",per,"pmca"), pmN1 = pm(v,"N1","TOUS",per,"pmca");
+    return [lib, fmt(pm(v,"N","TOUS",per,"nbCli"),"ent"), fmt(pN,"pct"), fmt(pN1,"pct"), {t:fmtPts(dp), cl:"d neu"},
+      {t:fmt(partPmca(R,"N","TOUS",per),"pct"), cl:"sec"}, fmt(pmN,"eur2"),
+      {t:fmtPct(variation("eur", pmN, pmN1)), cl:"d " + classe(variation("eur", pmN, pmN1), S_VIGIL)}];
+  });
+  h += "<h3 class='sousTitre'>Origine géographique de la clientèle</h3>" + tableSimple(
+    ["Périmètre","Nb clients","Part N","Part N-1","Δ part","Part réseau " + c.statut,"PMCA","Δ PMCA N-1"], deptLignes);
+  z.innerHTML = h;
+}
+
+/* --- partie 3 --- */
+function tendanceCA(c){
+  const cles = ["caN3","caN2","caN1","caN"];
+  return cles.map((k, i) => {
+    const val = fini(c.v[k]);
+    if(i === 0) return {k:k, ex:exerciceDecale(3), val:val, ev:null, evR:null};
+    const p = cles[i-1];
+    const ev = variation("eur", Z(val), Z(c.v[p]));
+    let s1 = 0, s0 = 0;
+    c.pairs.forEach(x => { if(x[k] > 0 && x[p] > 0){ s1 += x[k]; s0 += x[p]; } });
+    const evR = s0 ? s1/s0 - 1 : null;
+    return {k:k, ex:exerciceDecale(3-i), val:val, ev:ev, evR:evR};
+  });
+}
+function rendreClients(ctx){
+  const z = document.getElementById("corps_clients");
+  if(!E.base.clients){ z.innerHTML = vide("Importez la Synthèse client."); return; }
+  const c = ctx.clients;
+  if(!c){ z.innerHTML = absent("Synthèse client", c); return; }
+  let h = "<p class='sous'>" + esc(c.s.site) + ", " + esc(libTribu(c.s.tribu)) + ". Exercice complet" +
+    (E.base.clients.date ? " au " + dateFr(E.base.clients.date) : "") + ", références recalculées sur les " + c.pairs.length + " " + libStatut(c.statut, true) + ".</p>";
+  h += "<h3 class='sousTitre'>Exercice</h3>" + tableComparee(lignes(CLIENTS_LIGNES, c), {libReal:"Magasin"});
+  const t = tendanceCA(c);
+  h += "<h3 class='sousTitre'>Tendance du CA sur quatre exercices</h3>" + tableSimple(
+    ["Exercice","CA magasin","Δ","Réseau " + c.statut + " à périmètre comparable","Écart",""],
+    t.map(x => [x.ex, fmt(x.val,"eur"), {t:fmtPct(x.ev), cl:"d " + classe(x.ev, S_VIGIL)}, {t:fmtPct(x.evR), cl:"sec"},
+      {t:x.ev !== null && x.evR !== null ? fmtPts(x.ev - x.evR) : "—", cl:"d " + classe(x.ev !== null && x.evR !== null ? x.ev - x.evR : null, S_VIGIL)},
+      {t:barre(x.ev), cl:"colBarre"}]));
+  if(E.base.clients.colonneSuspecte)
+    h += "<p class='etat sousimp' style='margin-top:10px'>La colonne « % Client qui ne sont pas revenu » reprend exactement le ratio de nouveaux clients sur toutes les lignes du fichier : elle n'est pas exploitée, à vérifier à la source.</p>";
+  z.innerHTML = h;
+}
+
+/* ===== lecture ===== */
+function constat(niveau, axe, partie, titre, detail, indicateur){
+  return {niveau:niveau, axe:axe, partie:partie, titre:titre, detail:detail, indicateur:indicateur};
+}
+function niveauDe(x, sv, sa){
+  if(x === null) return "neutre";
+  return x <= -sa ? "alerte" : x <= -sv ? "vigilance" : x >= sv ? "favorable" : "neutre";
+}
+function texteRang(o, statut){ return o.rang ? o.rang + "e sur " + o.nb + " " + libStatut(statut, true) : ""; }
+
+/* évolution sur N-1 (et Prév), comparée à la tendance du réseau */
+function lectureEvolution(o, axe, partie, statut){
+  if(!o || o.real === null || (o.dN === null && o.dP === null)) return null;
+  const d = o.d, f = d.fmt, [sv, sa] = seuilsEvol(f), sens = d.sens || 1;
+  const ref = o.dN !== null ? o.dN : o.dP, sur = o.dN !== null ? "N-1" : "le prévisionnel";
+  let titre = Math.abs(ref) < sv ? d.nom + " stable sur " + sur
+    : d.nom + (estTaux(f) ? (ref > 0 ? " en hausse de " : " en baisse de ") : (ref > 0 ? " en progression de " : " en retrait de ")) + fmtVarAbs(f, ref) + " sur " + sur;
+  let niveau = niveauDe(sens*ref, sv, sa);
+  const r0 = o.refs[0];
+  if(niveau === "favorable" || niveau === "neutre"){
+    if(o.dN !== null && o.dP !== null && sens*o.dP <= -sv){ titre += ", mais sous le prévisionnel"; niveau = "vigilance"; }
+    else if(r0 && r0.ecart !== null && sens*r0.ecart <= -sv){ titre += ", mais sous la tendance du réseau"; niveau = "vigilance"; }
+  }
+  const det = [fmt(o.real, f) + " réalisé"];
+  if(o.dN !== null && o.dP !== null) det.push(fmtVar(f, o.dP) + " sur le prévisionnel");
+  if(r0 && r0.ev !== null){
+    det.push(minuscule(r0.nom) + " " + fmtVar(f, r0.ev));
+    if(r0.ecart !== null) det.push(Math.abs(r0.ecart) < sv ? "dans sa tendance" : "écart de " + fmtPts(r0.ecart));
+  }
+  if(o.rang) det.push(texteRang(o, statut) + " sur l'évolution");
+  return constat(niveau, axe, partie, titre, det.join(", ") + ".", d.nom);
+}
+
+/* niveau d'un indicateur comparé au réseau */
+function lectureNiveau(o, axe, partie, statut, mots){
+  if(!o || o.real === null || !o.refs[0] || o.refs[0].ecart === null) return null;
+  const d = o.d, r0 = o.refs[0], [sv, sa] = seuilsEcart(d.fmt), sens = d.sens || 1;
+  const x = sens * r0.ecart;
+  const titre = Math.abs(r0.ecart) < sv ? d.nom + " dans la moyenne du réseau"
+    : d.nom + (r0.ecart > 0 ? (mots && mots.haut || " au-dessus du réseau") : (mots && mots.bas || " en dessous du réseau"));
+  const det = fmt(o.real, d.fmt) + " contre " + fmt(r0.val, d.fmt) + " pour le " + minuscule(r0.nom) +
+    " (" + texteEcart(o, r0.ecart) + ")" + (o.rang ? ", " + texteRang(o, statut) : "") + ".";
+  return constat(mots && mots.neutre ? "neutre" : niveauDe(x, sv, sa), axe, partie, titre, det, d.nom);
+}
+
+function lecturePerf(ctx){
+  const c = ctx.perf;
+  if(!c) return [];
+  const A = lignes(PERF_ACC, c), P = lignes(PERF_PRESTA, c), v = c.v, R = c.refs[0].v, st = c.statut;
+  const out = [];
+  const push = x => { if(x) out.push(x); };
+
+  push(lectureEvolution(trouver(A,"caAcc"), "Perf ACC", "perf", st));
+  push(lectureEvolution(trouver(A,"txMg"), "Perf ACC", "perf", st));
+  push(lectureEvolution(trouver(A,"txR"), "Perf ACC", "perf", st));
+
+  const dF = trouver(A,"fac").dN, dPm = trouver(A,"pmf").dN;
+  if(dF !== null && dPm !== null){
+    const fB = dF <= -S_VIGIL, fH = dF >= S_VIGIL, pB = dPm <= -S_VIGIL, pH = dPm >= S_VIGIL;
+    const m = fB && pH ? ["Moins de factures, panier en hausse","vigilance"] : fB && pB ? ["Factures et PMF en recul","alerte"]
+      : fH && pB ? ["Plus de factures, panier en baisse","vigilance"] : fH && pH ? ["Factures et PMF en progression","favorable"]
+      : fB ? ["Perte de flux : factures en recul, PMF stable","vigilance"] : pB ? ["PMF en recul, flux stable","vigilance"]
+      : fH ? ["Flux en progression, PMF stable","favorable"] : pH ? ["PMF en progression, flux stable","favorable"] : null;
+    if(m) out.push(constat(m[1], "Perf ACC", "perf", m[0], "Nombre de factures " + fmtPct(dF) + ", PMF " + fmtPct(dPm) + " sur N-1.", "Nb factures"));
+  }
+  push(lectureNiveau(trouver(A,"caHomme"), "Perf ACC", "perf", st));
+  push(lectureNiveau(trouver(A,"cdv"), "Perf ACC", "perf", st));
+  if(fini(v.caRea) && !fini(v.caEgt))
+    out.push(constat("vigilance", "Perf ACC", "perf", "Aucun CA EGT sur l'exercice",
+      "Le " + minuscule(c.refs[0].nom) + " cumule " + fmt(R.caEgt, "eur") + " de CA EGT, facturé par " +
+      c.pairs.filter(x => fini(x.caEgt) > 0).length + " " + libStatut(st, true) + " sur " + c.pairs.length + ".", "CA EGT"));
+
+  push(lectureEvolution(trouver(P,"presta"), "Presta", "perf", st));
+  const syn = lectureNiveau(trouver(P,"syn"), "Presta", "perf", st);
+  if(syn){ if(fini(v.gainSyn) > 0) syn.detail += " Gain synergie calculé dans le tableau : " + fmt(v.gainSyn, "eur") + "."; out.push(syn); }
+  const fp = lectureNiveau(trouver(P,"fppec"), "Presta", "perf", st);
+  if(fp){ if(fini(v.gainFppec) > 0) fp.detail += " Gain FPPEC calculé : " + fmt(v.gainFppec, "eur") + "."; out.push(fp); }
+  if(fini(v.txFa) !== null){
+    const e = v.txFa - TX_FA_CIBLE;
+    out.push(constat(e < 0 ? (e <= -0.02 ? "alerte" : "vigilance") : "favorable", "Presta", "perf",
+      "Tx de CA FA " + (e < 0 ? "sous" : "au-dessus de") + " la référence de 4,5 %",
+      fmt(v.txFa, "pct") + " (" + fmtPts(e) + ")" + (fini(v.gainFa) > 0 ? ", gain FA calculé : " + fmt(v.gainFa, "eur") : "") + ".", "Tx de CA FA"));
+  }
+  if(fini(v.gainTotal) > 0 && fini(v.prRea)){
+    const poids = v.gainTotal / v.prRea;
+    out.push(constat(poids >= 0.10 ? "vigilance" : "neutre", "Presta", "perf",
+      "Potentiel presta non capté : " + fmt(v.gainTotal, "eur"),
+      "Soit " + fmt(poids, "pct") + " du CA presta réalisé (synergie " + fmt(v.gainSyn, "eur") + ", FPPEC " + fmt(v.gainFppec, "eur") + ", FA " + fmt(v.gainFa, "eur") + ").", "Total gain presta"));
+  }
+  return out;
+}
+
+function lecturePmca(ctx){
+  const c = ctx.pmca;
+  if(!c) return [];
+  const L = lignes(PMCA_LIGNES, c), v = c.v, R = c.refs[0].v, st = c.statut, out = [];
+  const pmca = lectureEvolution(trouver(L,"pmca"), "PMCA", "pmca", st);
+  if(pmca){
+    const rg = trouver(L,"rang");
+    if(rg && rg.real !== null) pmca.detail += " Rang I+F : " + (rg.n1 !== null ? fmt(rg.n1,"rang") + " en N-1, " : "") + fmt(rg.real,"rang") + " cette saison.";
+    out.push(pmca);
+  }
+  const dec = decomposition(ctx);
+  if(dec){
+    const cli = trouver(L,"nbCli"), r0 = cli && cli.refs[0];
+    if(r0 && r0.ev !== null) dec.constat.detail += " Nombre de clients du " + minuscule(r0.nom) + " : " + fmtPct(r0.ev) + (cli.rang ? ", " + texteRang(cli, st) + " sur l'évolution" : "") + ".";
+    out.push(dec.constat);
+  }
+
+  const pC = partPmca(v,"N","CFD","T"), pC1 = partPmca(v,"N1","CFD","T"), pCR = partPmca(R,"N","CFD","T");
+  if(pC !== null){
+    const d1 = pC1 !== null ? pC - pC1 : null, dr = pCR !== null ? pC - pCR : null;
+    const pmC = pm(v,"N","CFD","T","pmca"), pmT = pm(v,"N","TOUS","T","pmca");
+    const niveau = (d1 !== null && d1 <= -0.02) || (dr !== null && dr <= -0.05) ? "vigilance"
+      : (d1 !== null && d1 >= 0.02) ? "favorable" : "neutre";
+    out.push(constat(niveau, "Clients", "pmca",
+      "Clients CFD : " + fmt(pC,"pct") + " des clients" + (d1 !== null && Math.abs(d1) >= S_VIGIL_PT ? (d1 > 0 ? ", en hausse" : ", en baisse") : ""),
+      (d1 !== null ? fmtPts(d1) + " sur N-1, " : "") + (pCR !== null ? "réseau " + st + " à " + fmt(pCR,"pct") + ". " : "") +
+      (pmC !== null && pmT ? "PMCA des clients CFD " + fmt(pmC,"eur2") + " contre " + fmt(pmT,"eur2") + " tous clients confondus." : ""), "Part clients CFD"));
+  }
+  const pNQ = partPmca(v,"N","NQ","T"), pNQR = partPmca(R,"N","NQ","T");
+  if(pNQ !== null && pNQR !== null && pNQ - pNQR >= 0.03)
+    out.push(constat("vigilance", "Clients", "pmca", "Part de clients NON QUAL supérieure au réseau",
+      fmt(pNQ,"pct") + " des clients contre " + fmt(pNQR,"pct") + " pour le réseau " + st + ".", "Part clients NON QUAL"));
+  const pHD = partPmca(v,"N","TOUS","HD"), pHD1 = partPmca(v,"N1","TOUS","HD");
+  if(pHD !== null && pHD1 !== null && Math.abs(pHD - pHD1) >= 0.02)
+    out.push(constat("neutre", "Clients", "pmca", "Clientèle hors département " + (pHD > pHD1 ? "en hausse" : "en baisse"),
+      fmt(pHD,"pct") + " des clients contre " + fmt(pHD1,"pct") + " en N-1, PMCA hors département " + fmt(pm(v,"N","TOUS","HD","pmca"),"eur2") + ".", "Part hors département"));
+  return out;
+}
+
+function lectureClients(ctx){
+  const c = ctx.clients;
+  if(!c) return [];
+  const L = lignes(CLIENTS_LIGNES, c), st = c.statut, out = [];
+  const push = x => { if(x) out.push(x); };
+  const t = tendanceCA(c).filter(x => x.val);
+  if(t.length >= 3){
+    const premier = t[0], dernier = t[t.length-1];
+    const ev = variation("eur", dernier.val, premier.val);
+    let sR1 = 0, sR0 = 0;
+    c.pairs.forEach(x => { const a = x[dernier.k], b = x[premier.k]; if(a > 0 && b > 0){ sR1 += a; sR0 += b; } });
+    const evR = sR0 ? sR1/sR0 - 1 : null;
+    const ecart = evR !== null && ev !== null ? ev - evR : null;
+    const niveau = ecart !== null && ecart <= -0.05 ? (ev <= -0.10 ? "alerte" : "vigilance")
+      : ecart !== null && ecart >= 0.05 ? "favorable" : ev <= -0.10 ? "vigilance" : ev >= 0.05 ? "favorable" : "neutre";
+    push(constat(niveau, "Clients", "clients",
+      "CA " + (ev >= 0 ? "en hausse" : "en baisse") + " de " + fmtVarAbs("eur", ev) + " depuis " + premier.ex +
+        (ecart !== null && Math.abs(ecart) >= 0.05 ? (ecart > 0 ? ", mieux que le réseau" : ", moins bien que le réseau") : ""),
+      t.map(x => x.ex + " " + fmt(x.val,"eur")).join(", ") + (evR !== null ? ". Réseau " + st + " à périmètre comparable : " + fmtPct(evR) + "." : "."), "CA Fact exercice"));
+  }
+  push(lectureNiveau(trouver(L,"ratioNouv"), "Clients", "clients", st, {haut:" plus élevée que le réseau", bas:" plus faible que le réseau"}));
+  push(lectureNiveau(trouver(L,"pmc"), "Clients", "clients", st));
+  const pn = trouver(L,"pmcNouv"), pc = trouver(L,"pmcConnus");
+  if(pn && pc && pn.real !== null && pc.real !== null){
+    const e = variation("eur", pn.real, pc.real);
+    push(constat("neutre", "Clients", "clients",
+      "Les nouveaux clients dépensent " + (Math.abs(e) < S_VIGIL ? "autant que" : e > 0 ? "plus que" : "moins que") + " les clients déjà connus",
+      "PMC " + fmt(pn.real,"eur2") + " pour les nouveaux clients, " + fmt(pc.real,"eur2") + " pour les autres (" + fmtPct(e) + ")." , "PMC nouveaux clients"));
+  }
+  push(lectureNiveau(trouver(L,"txSigne"), "Clients", "clients", st));
+  push(lectureNiveau(trouver(L,"portSurCa"), "Clients", "clients", st, {neutre:true}));
+  return out;
+}
+const LECTURES = {perf:lecturePerf, pmca:lecturePmca, clients:lectureClients};
+
+/* décomposition du CA 12 mois : clients x fréquence x PMF */
+function decomposition(ctx){
+  const c = ctx.pmca;
+  if(!c) return null;
+  const v = c.v, g = (p, m) => pm(v, p, "TOUS", "T", m);
+  const eCli = variation("eur", g("N","nbCli"), g("N1","nbCli"));
+  const eFreq = variation("eur", g("N","freq"), g("N1","freq"));
+  const ePmf = variation("eur", g("N","pmf"), g("N1","pmf"));
+  const eCa = variation("eur", g("N","ca"), g("N1","ca"));
+  if(eCli === null || eFreq === null || ePmf === null) return null;
+  const effets = [["le nombre de clients", eCli], ["la fréquence d'achat", eFreq], ["le PMF", ePmf]];
+  const moteur = effets.slice().sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))[0];
+  const ca = eCa !== null ? eCa : (1+eCli)*(1+eFreq)*(1+ePmf) - 1;
+  const titre = "CA 12 mois " + (Math.abs(ca) < S_VIGIL ? "stable" : ca > 0 ? "en progression de " + fmtVarAbs("eur", ca) : "en retrait de " + fmtVarAbs("eur", ca)) +
+    ", " + (Math.abs(moteur[1]) < S_VIGIL ? "sans moteur marqué"
+      : (ca >= 0 && moteur[1] >= 0) ? "porté par " + moteur[0]
+      : (ca < 0 && moteur[1] < 0) ? "sous l'effet du recul " + {"le nombre de clients":"du nombre de clients", "la fréquence d'achat":"de la fréquence d'achat", "le PMF":"du PMF"}[moteur[0]]
+      : "malgré " + moteur[0]);
+  return {eCli:eCli, eFreq:eFreq, ePmf:ePmf, eCa:ca,
+    constat:constat(niveauDe(ca, S_VIGIL, S_ALERTE), "PMCA", "pmca", titre,
+      "Nombre de clients " + fmtPct(eCli) + ", fréquence d'achat " + fmtPct(eFreq) + ", PMF " + fmtPct(ePmf) + " sur N-1.", "CA 12 mois glissants")};
+}
+
+function lectureCroisee(ctx){
+  const out = [];
+  const p = ctx.perf, cl = ctx.clients, pc = ctx.pmca;
+  if(p && cl && fini(p.v.caRea) && fini(cl.v.caN)){
+    const e = variation("eur", cl.v.caN, p.v.caRea);
+    if(Math.abs(e) > 0.01)
+      out.push(constat("vigilance", "Autre", "croisee", "CA différent entre Performance et Synthèse client",
+        fmt(p.v.caRea,"eur") + " dans Performance, " + fmt(cl.v.caN,"eur") + " dans la Synthèse client (" + fmtPct(e) + "). Vérifier la date d'arrêté des deux fichiers.", "CA accessoires"));
+  }
+  if(cl && pc){
+    const a = fini(cl.v.nbCli), b = pm(pc.v, "N", "TOUS", "T", "nbCli");
+    const e = variation("eur", b, a);
+    if(e !== null && Math.abs(e) > 0.05)
+      out.push(constat("neutre", "Autre", "croisee", "Nombre de clients différent entre PMCA et Synthèse client",
+        fmt(b,"ent") + " clients sur 12 mois glissants, " + fmt(a,"ent") + " sur l'exercice (" + fmtPct(e) + ") : les périmètres de comptage diffèrent.", "Nb clients"));
+  }
+  return out;
+}
+
+/* ===== rendu général ===== */
+function carte(x, tag){
+  return "<div class='constat " + x.niveau + "'><h3>" + esc(x.titre) +
+    (tag ? "<span class='tag'>" + esc(tag) + "</span>" : "") + "</h3><p>" + esc(x.detail) + "</p></div>";
+}
+const TAGS = {perf:"Perf", pmca:"PMCA", clients:"Clients", croisee:"Croisée"};
+function tousConstats(ctx){
+  ctx = ctx || contexte();
+  return lecturePerf(ctx).concat(lecturePmca(ctx), lectureClients(ctx), lectureCroisee(ctx));
+}
+
+function toutCalculer(){
+  const ctx = contexte();
+  rendrePerf(ctx); rendrePmca(ctx); rendreClients(ctx);
+  ["perf","pmca","clients"].forEach(p => {
+    const l = LECTURES[p](ctx);
+    document.getElementById("lecture_" + p).innerHTML = l.length ? l.map(x => carte(x)).join("") : vide("La lecture apparaît une fois le tableau importé et le magasin choisi.");
+  });
+
+  const z = document.getElementById("croisee");
+  const dec = decomposition(ctx), cr = lectureCroisee(ctx);
+  let h = "";
+  if(dec || ctx.perf){
+    const bloc = (lib, val) => "<div><div class='lib'>" + lib + "</div><div class='val d " + classe(val, S_VIGIL) + "'>" + fmtPct(val) + "</div></div>";
+    h += "<div class='croise' style='grid-template-columns:repeat(auto-fit,minmax(150px,1fr))'>" +
+      (ctx.perf ? bloc("CA ACC exercice (Perf)", variation("eur", ctx.perf.v.caRea, Z(ctx.perf.v.caN1))) : "") +
+      (dec ? bloc("CA 12 mois (PMCA)", dec.eCa) + bloc("Nombre de clients", dec.eCli) + bloc("Fréquence d'achat", dec.eFreq) + bloc("PMF", dec.ePmf) : "") +
+      "</div>";
+    if(dec) h += carte(dec.constat);
+  }
+  h += cr.map(x => carte(x)).join("");
+  z.innerHTML = h || vide("Il faut au moins le tableau PMCA ou le tableau Performance pour le magasin choisi.");
+
+  const tous = tousConstats(ctx);
+  const forts = tous.filter(x => x.niveau === "favorable");
+  const vigil = tous.filter(x => x.niveau === "vigilance" || x.niveau === "alerte");
+  document.getElementById("forts").innerHTML = forts.length ? forts.map(x => carte(x, TAGS[x.partie])).join("") : vide("Aucun pour l'instant.");
+  document.getElementById("vigilance").innerHTML = vigil.length ? vigil.map(x => carte(x, TAGS[x.partie])).join("") : vide("Aucun pour l'instant.");
+  const al = vigil.filter(x => x.niveau === "alerte").length;
+  document.getElementById("compteBilan").textContent = tous.length
+    ? forts.length + " point" + (forts.length > 1 ? "s" : "") + " fort" + (forts.length > 1 ? "s" : "") + ", " +
+      vigil.length + " point" + (vigil.length > 1 ? "s" : "") + " de vigilance" + (al ? " dont " + al + " en alerte" : "") : "";
+
+  rendreObjectifs(ctx);
+  rendrePotentiel(ctx);
+  rendreLibelles();
+  rendreSources(ctx);
+  majJauge(ctx);
+}
+
+function rendreLibelles(){
+  document.querySelectorAll(".libT").forEach(e => e.textContent = libT());
+  document.querySelectorAll(".libTs").forEach(e => e.textContent = libTs());
+  const ms = moisDuTrimestre(E.trimestre).map(m => MOIS_NOMS[m-1]);
+  document.getElementById("sousCadre").textContent =
+    "Bilan du " + libT() + " (cumul d'exercice arrêté fin " + ms[2] + ") et feuille de route du " + libTs() + ".";
+  const aides = {perf:"Performance CA version Pabad.", pmca:"PMCA 12 mois glissants, saisons N et N-1.", clients:"Synthèse client de fin d'exercice."};
+  Object.keys(aides).forEach(p => { const e = document.getElementById("etat_" + p); if(!e.textContent) e.textContent = aides[p]; });
+}
+function rendreSources(ctx){
+  const z = document.getElementById("sources");
+  const trouve = {perf:!!ctx.perf, pmca:!!ctx.pmca, clients:!!ctx.clients};
+  const b = E.base;
+  z.innerHTML = [["perf","Performance"],["pmca","PMCA"],["clients","Synthèse client"]].map(([k, lib]) => {
+    const charge = !!b[k];
+    const suffixe = !charge ? "" : !E.magasin ? "" : trouve[k] ? "" : " : magasin absent";
+    return "<span class='puce " + (charge && (!E.magasin || trouve[k]) ? "ok" : "") + "' title='" + esc(charge ? b[k].fichier : "Non importé") + "'>" + lib + suffixe + "</span>";
+  }).join("");
+}
+function majJauge(ctx){
+  const pts = [!!ctx.perf, !!ctx.pmca, !!ctx.clients,
+    OBJECTIFS.some(o => E.objectifs[o.k] && E.objectifs[o.k].obj !== null && E.objectifs[o.k].obj !== undefined),
+    E.pa.some(l => l.action), !!E.fdr];
+  document.getElementById("jauge").style.width = Math.round(pts.filter(Boolean).length / pts.length * 100) + "%";
+}
+
+/* ===== objectifs ===== */
+const OBJECTIFS = [
+  {k:"caAcc",  nom:"CA accessoires", fmt:"eur",  real:c => c.perf ? fini(c.perf.v.caRea) : null},
+  {k:"presta", nom:"CA presta",      fmt:"eur",  real:c => c.perf ? fini(c.perf.v.prRea) : null},
+  {k:"txMg",   nom:"% Marge",        fmt:"pct",  real:c => c.perf ? fini(c.perf.v.txMg) : null},
+  {k:"syn",    nom:"% Synergie",     fmt:"pct",  real:c => c.perf ? fini(c.perf.v.syn) : null},
+  {k:"pmca",   nom:"PMCA",           fmt:"eur2", real:c => c.pmca ? pm(c.pmca.v,"N","TOUS","T","pmca") : null},
+  {k:"nbCli",  nom:"Nb clients",     fmt:"ent",  real:c => c.pmca ? pm(c.pmca.v,"N","TOUS","T","nbCli") : null}
+];
+function fmtSaisie(f, v){
+  if(v === null || v === undefined || !isFinite(v)) return "";
+  if(estTaux(f)) return virgule(v*100, 1) + " %";
+  if(f === "eur2") return v.toLocaleString("fr-FR", {minimumFractionDigits:2, maximumFractionDigits:2});
+  return Math.round(v).toLocaleString("fr-FR");
+}
+function lireSaisie(f, t){
+  let v = nombre(t);
+  if(v !== null && estTaux(f) && !/%/.test(t)) v /= 100;
+  return v;
+}
+function champObjectif(id, o, v, lib){
+  return "<td><input class='saisie' inputmode='decimal' data-id='" + id + "' value='" + esc(fmtSaisie(o.fmt, v)) + "' aria-label='" + esc(lib) + "'></td>";
+}
+function rendreObjectifs(ctx){
+  const s = trimestreSuivant();
+  let h = "<thead><tr><th>Indicateur</th><th>Réalisé " + esc(libT()) + "</th><th>N-1 " + esc(s.t) +
+    "</th><th>Objectif " + esc(s.t) + "</th><th>Δ objectif / N-1</th></tr></thead><tbody>";
+  OBJECTIFS.forEach(o => {
+    const x = E.objectifs[o.k] || {n1:null, obj:null};
+    const d = variation(o.fmt, x.obj, x.n1);
+    h += "<tr><td>" + o.nom + "</td><td>" + fmt(o.real(ctx), o.fmt) + "</td>" +
+      champObjectif("obj|" + o.k + "|n1", o, x.n1, o.nom + " N-1 trimestre suivant") +
+      champObjectif("obj|" + o.k + "|obj", o, x.obj, o.nom + " objectif") +
+      cellule(fmtVar(o.fmt, d), "d " + classe(d, seuilsEvol(o.fmt)[0])) + "</tr>";
+  });
+  document.getElementById("tabObjectifs").innerHTML = h + "</tbody>";
+}
+function majObjectif(el){
+  const [, k, c] = el.dataset.id.split("|");
+  const o = OBJECTIFS.find(x => x.k === k);
+  E.objectifs[k] = E.objectifs[k] || {n1:null, obj:null};
+  E.objectifs[k][c] = lireSaisie(o.fmt, el.value);
+  garderFocusApres(() => { const ctx = contexte(); rendreObjectifs(ctx); majJauge(ctx); });
+  sauver();
+}
+function garderFocusApres(fn){
+  setTimeout(() => {
+    const a = document.activeElement, id = a && a.dataset ? a.dataset.id : null;
+    fn();
+    if(id){ const el = document.querySelector("[data-id='" + id + "']"); if(el){ el.focus(); if(el.select) el.select(); } }
+  }, 0);
+}
+
+/* ===== potentiel presta ===== */
+function lignesPotentiel(ctx){
+  if(!ctx.perf) return [];
+  const v = ctx.perf.v, R = ctx.perf.refs[0].v;
+  return PERF_GAINS.map(g => ({nom:g.nom, aide:g.aide, val:fini(v[g.k]), reseau:fini(R[g.k])}));
+}
+function rendrePotentiel(ctx){
+  const z = document.getElementById("potentiel");
+  const l = lignesPotentiel(ctx);
+  if(!l.length){ z.innerHTML = vide("Disponible une fois le tableau Performance importé et le magasin choisi."); return; }
+  z.innerHTML = tableSimple(["Levier","Gain magasin","Base de calcul","Total " + minuscule(ctx.perf.refs[0].nom)],
+    l.map(x => [x.nom, {t:"<b>" + fmt(x.val,"eur") + "</b>"}, {t:esc(x.aide), cl:"sec"}, {t:fmt(x.reseau,"eur"), cl:"sec"}]));
+}
+
+/* ===== plan d'action ===== */
+const CHAMPS_PA = [
+  {k:"axe", type:"liste", options:AXES}, {k:"constat", type:"texte"},
+  {k:"action", type:"texte", aide:"Action concrète et vérifiable"},
+  {k:"responsable", type:"liste", options:RESPONSABLES}, {k:"echeance", type:"date"},
+  {k:"indicateur", type:"ligne"}, {k:"priorite", type:"liste", options:["","1","2","3"]}
+];
+function lignePA(base){
+  const s = trimestreSuivant();
+  return Object.assign({axe:"Autre", constat:"", action:"", responsable:"Franchisé",
+    echeance:finTrimestre(s.t, s.ex), indicateur:"", priorite:""}, base || {});
+}
+function rendrePA(){
+  const corps = document.getElementById("corpsPA");
+  if(!E.pa.length){
+    corps.innerHTML = "<tr><td colspan='8'>" + vide("Aucune action. Reprenez les points de vigilance ou ajoutez une action.") + "</td></tr>";
+  } else {
+    corps.innerHTML = E.pa.map((l, i) => "<tr>" + CHAMPS_PA.map(f => {
+      const v = l[f.k] || "";
+      const at = "data-pa='" + i + "' data-f='" + f.k + "' aria-label='" + f.k + " action " + (i+1) + "'";
+      if(f.type === "liste") return "<td><select " + at + ">" + f.options.map(o => "<option" + (o === v ? " selected" : "") + ">" + esc(o) + "</option>").join("") + "</select></td>";
+      if(f.type === "texte") return "<td><textarea " + at + (f.aide ? " placeholder='" + esc(f.aide) + "'" : "") + ">" + esc(v) + "</textarea></td>";
+      if(f.type === "date") return "<td><input type='date' " + at + " value='" + esc(v) + "'></td>";
+      return "<td><input type='text' " + at + " value='" + esc(v) + "'></td>";
+    }).join("") + "<td><button class='sup' title='Supprimer' onclick='supprimerPA(" + i + ")'>×</button></td></tr>").join("");
+  }
+  const n = E.pa.length;
+  document.getElementById("comptePA").textContent = n ? n + " action" + (n > 1 ? "s" : "") : "";
+}
+function majPA(el){
+  const i = +el.dataset.pa;
+  if(!E.pa[i]) return;
+  E.pa[i][el.dataset.f] = el.value;
+  majJauge(contexte()); sauver();
+}
+function ajouterPA(){ E.pa.push(lignePA()); rendrePA(); sauver(); }
+function supprimerPA(i){ E.pa.splice(i, 1); rendrePA(); majJauge(contexte()); sauver(); }
+function proposerPA(){
+  const vigil = tousConstats().filter(x => x.niveau === "alerte" || x.niveau === "vigilance");
+  let ajout = 0;
+  vigil.forEach(x => {
+    if(E.pa.some(l => l.source === x.titre)) return;
+    E.pa.push(lignePA({axe:x.axe, constat:x.titre + ". " + x.detail, indicateur:x.indicateur || "",
+      priorite:x.niveau === "alerte" ? "1" : "", source:x.titre}));
+    ajout++;
+  });
+  rendrePA(); sauver();
+  if(!vigil.length) alert("Aucun point de vigilance dans la lecture actuelle.");
+  else if(!ajout) alert("Les points de vigilance sont déjà repris dans le plan d'action.");
+}
+
+/* ===== mail ===== */
+function compterMots(t){ return String(t || "").trim().split(/\s+/).filter(Boolean).length; }
+function majMots(){
+  const n = compterMots(document.getElementById("texteFDR").value);
+  const e = document.getElementById("motsFDR");
+  e.textContent = n ? n + " mots" + (n > MOTS_MAX ? ", au-delà des " + MOTS_MAX + " conseillés" : "") : "";
+  e.className = "etat" + (n > MOTS_MAX ? " ko" : "");
+}
+function ligneMail(o){
+  if(!o || o.real === null) return null;
+  const d = o.d, b = [];
+  if(d.n1 && o.dN !== null && d.type !== "rang") b.push(fmtVar(d.fmt, o.dN) + " sur N-1");
+  if(d.prev && o.dP !== null) b.push(fmtVar(d.fmt, o.dP) + " sur le prévisionnel");
+  const r0 = o.refs[0];
+  if(r0){
+    if(d.n1 && !d.niveau && r0.ev !== null) b.push(minuscule(r0.nom) + " " + fmtVar(d.fmt, r0.ev));
+    else if((!d.n1 || d.niveau) && r0.val !== null && !d.pasEcart) b.push(minuscule(r0.nom) + " " + fmt(r0.val, d.fmt));
+  }
+  return "- " + d.nom + " : " + fmt(o.real, d.fmt) + (b.length ? " (" + b.join(", ") + ")" : "");
+}
+function composerFDR(){
+  const ctx = contexte();
+  const L = [];
+  L.push("Objet : bilan " + libT() + " et feuille de route " + libTs() + (E.magasin ? " – " + E.magasin : ""));
+  L.push(""); L.push("Bonjour" + (E.franchise ? " " + E.franchise : "") + ",");
+  L.push("");
+  L.push("Suite à notre point" + (E.date ? " du " + dateFr(E.date) : "") + (E.participants ? " (" + E.participants + ")" : "") +
+    ", voici le bilan du " + libT() + " et la feuille de route du " + libTs() + ".");
+  L.push(""); L.push("BILAN " + libT().toUpperCase());
+  const bloc = (titre, liste) => { const l = liste.map(ligneMail).filter(Boolean); if(l.length){ L.push(""); L.push(titre); l.forEach(x => L.push(x)); } };
+  if(ctx.perf){
+    const A = lignes(PERF_ACC, ctx.perf), P = lignes(PERF_PRESTA, ctx.perf);
+    bloc("Perfs ACC et Presta (cumul exercice)", ["caAcc","txMg","caHomme","presta","syn","txFa"].map(k => trouver(A, k) || trouver(P, k)));
+  }
+  if(ctx.pmca){
+    const M = lignes(PMCA_LIGNES, ctx.pmca);
+    bloc("PMCA (12 mois glissants)", ["pmca","nbCli","freq","pmf"].map(k => trouver(M, k)));
+  }
+  if(ctx.clients){
+    const C = lignes(CLIENTS_LIGNES, ctx.clients);
+    bloc("Synthèse client", ["nbCli","ratioNouv","pmc","txSigne"].map(k => trouver(C, k)));
+  }
+  const tous = tousConstats(ctx);
+  const forts = tous.filter(x => x.niveau === "favorable");
+  const vigil = tous.filter(x => x.niveau === "vigilance" || x.niveau === "alerte");
+  if(forts.length){ L.push(""); L.push("Points forts"); forts.forEach(x => L.push("- " + x.titre)); }
+  if(vigil.length){ L.push(""); L.push("Points de vigilance"); vigil.forEach(x => L.push("- " + x.titre)); }
+  if(E.lectureCR){ L.push(""); L.push(E.lectureCR.trim()); }
+  if(E.retourFranchise){ L.push(""); L.push("Ton retour : " + E.retourFranchise.trim()); }
+
+  const objs = OBJECTIFS.filter(o => E.objectifs[o.k] && E.objectifs[o.k].obj !== null && E.objectifs[o.k].obj !== undefined);
+  const pot = lignesPotentiel(ctx).find(x => x.nom === "Total gain presta");
+  if(objs.length || E.pa.length){ L.push(""); L.push("FEUILLE DE ROUTE " + libTs().toUpperCase()); }
+  if(objs.length){
+    L.push(""); L.push("Objectifs");
+    objs.forEach(o => { const x = E.objectifs[o.k], d = variation(o.fmt, x.obj, x.n1);
+      L.push("- " + o.nom + " : " + fmt(x.obj, o.fmt) + (d !== null ? " (" + fmtVar(o.fmt, d) + " sur N-1)" : "")); });
+  }
+  if(pot && pot.val > 0){ L.push(""); L.push("Potentiel presta identifié sur l'exercice : " + fmt(pot.val, "eur") + "."); }
+  const actions = E.pa.filter(l => l.action || l.constat);
+  if(actions.length){
+    L.push(""); L.push("Plan d'action");
+    actions.slice().sort((a, b) => (a.priorite || "9").localeCompare(b.priorite || "9")).forEach(l => {
+      const meta = [l.responsable, l.echeance ? "pour le " + dateFr(l.echeance) : "", l.indicateur ? "suivi : " + l.indicateur : ""].filter(Boolean);
+      L.push("- [" + l.axe + "] " + (l.action || "action à définir") + (meta.length ? " (" + meta.join(", ") + ")" : ""));
+    });
+  }
+  if(E.prochainPoint){ L.push(""); L.push("Prochain point de suivi : " + dateFr(E.prochainPoint) + "."); }
+  L.push(""); L.push("Bonne journée,");
+  E.fdr = L.join("\n");
+  document.getElementById("texteFDR").value = E.fdr;
+  majMots(); majJauge(ctx); sauver();
+}
+function copierFDR(){
+  const t = document.getElementById("texteFDR").value;
+  if(!t) return;
+  const ok = () => { const e = document.getElementById("motsFDR"); e.textContent = "Copié dans le presse-papiers."; e.className = "etat ok"; };
+  if(navigator.clipboard) navigator.clipboard.writeText(t).then(ok).catch(() => {});
+  else { document.getElementById("texteFDR").select(); document.execCommand("copy"); ok(); }
+}
+
+/* ===== PDF ===== */
+function chargerScript(url){
+  return new Promise((ok, ko) => {
+    const s = document.createElement("script");
+    s.src = url; s.onload = ok;
+    s.onerror = () => ko(new Error("bibliothèque PDF inaccessible, vérifiez la connexion"));
+    document.head.appendChild(s);
+  });
+}
+async function chargerJsPdf(){
+  if(!window.jspdf) await chargerScript(JSPDF_URL);
+  if(!window.jspdf.jsPDF.API.autoTable) await chargerScript(AUTOTABLE_URL);
+  return window.jspdf.jsPDF;
+}
+async function exporterPDF(){
+  const btn = document.getElementById("btnPdf"), avant = btn.textContent;
+  btn.textContent = "…";
+  try{
+    const ctx = contexte();
+    const JS = await chargerJsPdf();
+    const doc = new JS({unit:"mm", format:"a4", orientation:"landscape"});
+    const M = 12, W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight(), L = W - 2*M;
+    let y = M;
+    const net = t => String(t === null || t === undefined ? "" : t).replace(/<[^>]+>/g, "")
+      .replace(/[\u00A0\u202F\u2009]/g, " ").replace(/Δ/g, "Écart").replace(/\u2212/g, "-").replace(/…/g, "...");
+    const saut = h => { if(y + h > H - 12){ doc.addPage(); y = M; } };
+    const titre = t => {
+      saut(14); y += 3;
+      doc.setFont("helvetica","bold"); doc.setFontSize(12); doc.setTextColor(14,44,73);
+      doc.text(net(t), M, y); y += 2;
+      doc.setDrawColor(30,115,190); doc.setLineWidth(0.6); doc.line(M, y, M + L, y);
+      y += 5; doc.setTextColor(30,34,46);
+    };
+    const sousTitre = t => { saut(10); doc.setFont("helvetica","bold"); doc.setFontSize(9.5); doc.setTextColor(107,122,136); doc.text(net(t), M, y); y += 2; doc.setTextColor(30,34,46); };
+    const para = (t, taille, gras) => {
+      doc.setFont("helvetica", gras ? "bold" : "normal"); doc.setFontSize(taille || 9.5);
+      doc.splitTextToSize(net(t), L).forEach(l => { saut(6); doc.text(l, M, y); y += 4.3; });
+      y += 1.2;
+    };
+    const COUL = {pos:[28,156,115], neg:[192,57,43], neu:[107,122,136]};
+    const table = (head, body, styles) => {
+      if(!body.length) return;
+      saut(16);
+      doc.autoTable({
+        head:[head.map(net)], body:body.map(r => r.map(c => net(c && typeof c === "object" ? c.t : c))),
+        startY:y, margin:{left:M, right:M},
+        styles:{font:"helvetica", fontSize:7.6, cellPadding:1.3, textColor:[30,34,46], halign:"right"},
+        headStyles:{fillColor:[14,44,73], textColor:255, fontSize:7.2, halign:"right"},
+        columnStyles:Object.assign({0:{halign:"left", fontStyle:"bold"}}, styles || {}),
+        alternateRowStyles:{fillColor:[244,246,249]},
+        didParseCell:dt => {
+          if(dt.section === "head" && dt.column.index === 0) dt.cell.styles.halign = "left";
+          if(dt.section !== "body") return;
+          const brut = body[dt.row.index][dt.column.index];
+          if(brut && typeof brut === "object" && brut.c && COUL[brut.c]){ dt.cell.styles.textColor = COUL[brut.c]; dt.cell.styles.fontStyle = "bold"; }
+        }
+      });
+      y = doc.lastAutoTable.finalY + 4;
+    };
+    const NIV = {alerte:[192,57,43], vigilance:[224,138,46], favorable:[28,156,115], neutre:[107,122,136]};
+    const cartes = liste => liste.forEach(x => {
+      saut(11);
+      const c = NIV[x.niveau] || NIV.neutre;
+      doc.setFillColor(c[0], c[1], c[2]); doc.rect(M, y - 3, 1.2, 4, "F");
+      doc.setFont("helvetica","bold"); doc.setFontSize(9);
+      doc.splitTextToSize(net(x.titre), L - 4).forEach(l => { saut(5); doc.text(l, M + 3, y); y += 4; });
+      doc.setFont("helvetica","normal"); doc.setFontSize(8.4); doc.setTextColor(55,71,79);
+      doc.splitTextToSize(net(x.detail), L - 4).forEach(l => { saut(5); doc.text(l, M + 3, y); y += 3.8; });
+      doc.setTextColor(30,34,46); y += 1.8;
+    });
+    const comparee = liste => {
+      if(!liste.length) return;
+      const avecPrev = liste.some(o => o.d.prev), avecN1 = liste.some(o => o.d.n1);
+      const head = ["Indicateur"].concat(avecN1 ? ["N-1"] : [], avecPrev ? ["Prév"] : [], ["Réalisé"], avecPrev ? ["Écart Prév"] : [], avecN1 ? ["Écart N-1"] : []);
+      liste[0].refs.forEach((r, i) => { head.push(r.nom); if(i === 0) head.push("Écart"); });
+      head.push("Rang");
+      table(head, liste.map(o => {
+        const d = o.d, row = [d.nom];
+        if(avecN1) row.push(d.n1 ? fmt(o.n1, d.fmt) : "");
+        if(avecPrev) row.push(d.prev ? fmt(o.prev, d.fmt) : "");
+        row.push(fmt(o.real, d.fmt));
+        if(avecPrev) row.push(d.prev ? {t:fmtVar(d.fmt, o.dP), c:classeEvol(d, o.dP)} : "");
+        if(avecN1) row.push(d.n1 ? {t:fmtEvolCell(o), c:d.type === "rang" ? classe(o.dN, 1, 1) : classeEvol(d, o.dN)} : "");
+        o.refs.forEach((r, i) => { row.push(valeurRef(o, r)); if(i === 0) row.push({t:texteEcart(o, r.ecart), c:classeEcart(o, r.ecart)}); });
+        row.push(o.rang ? o.rang + "/" + o.nb : "-");
+        return row;
+      }));
+    };
+
+    // bandeau
+    doc.setFillColor(14,44,73); doc.rect(0, 0, W, 22, "F");
+    doc.setFillColor(30,115,190); doc.rect(0, 22, W, 1.2, "F");
+    doc.setTextColor(255); doc.setFont("helvetica","bold"); doc.setFontSize(15);
+    doc.text(net("Bilan " + libT() + " et feuille de route " + libTs()), M, 10.5);
+    doc.setFont("helvetica","normal"); doc.setFontSize(10);
+    doc.text(net([E.magasin || "Magasin non précisé", E.franchise, E.date ? dateFr(E.date) : ""].filter(Boolean).join("  –  ")), M, 17);
+    doc.setTextColor(30,34,46); y = 30;
+    if(E.participants) para("Participants : " + E.participants, 9);
+
+    if(ctx.perf){
+      titre("Perfs ACC et Presta – " + (E.base.perf.trimestre ? E.base.perf.trimestre + " cumulé " + E.base.perf.exercice : "cumul exercice"));
+      sousTitre("Accessoires"); y += 2; comparee(lignes(PERF_ACC, ctx.perf));
+      sousTitre("Prestation"); y += 2; comparee(lignes(PERF_PRESTA, ctx.perf));
+      sousTitre("Lecture"); y += 3; cartes(lecturePerf(ctx));
+    }
+    if(ctx.pmca){
+      const c = ctx.pmca, v = c.v, R = c.refs[0].v;
+      doc.addPage(); y = M;
+      titre("PMCA – 12 mois glissants, saison " + c.sp.libN + (c.sp.libN1 ? " contre " + c.sp.libN1 : ""));
+      comparee(lignes(PMCA_LIGNES, c));
+      sousTitre("Mix clientèle"); y += 2;
+      table(["Type de client","Nb clients","Part N","Part N-1","Écart part","Part réseau","PMCA","Écart PMCA N-1","Fréquence","Part du CA"],
+        PMCA_TYPES.filter(t => t !== "TOUS").map(t => {
+          const pN = partPmca(v,"N",t,"T"), pN1 = partPmca(v,"N1",t,"T"), dp = pN !== null && pN1 !== null ? pN - pN1 : null;
+          const e = variation("eur", pm(v,"N",t,"T","pmca"), pm(v,"N1",t,"T","pmca"));
+          return [PMCA_LIB[t], fmt(pm(v,"N",t,"T","nbCli"),"ent"), fmt(pN,"pct"), fmt(pN1,"pct"), {t:fmtPts(dp), c:classe(dp, S_VIGIL_PT, t === "NQ" ? -1 : 1)},
+            fmt(partPmca(R,"N",t,"T"),"pct"), fmt(pm(v,"N",t,"T","pmca"),"eur2"), {t:fmtPct(e), c:classe(e, S_VIGIL)}, fmt(pm(v,"N",t,"T","freq"),"dec2"), fmt(partCaPmca(v,"N",t),"pct")];
+        }));
+      sousTitre("Lecture"); y += 3; cartes(lecturePmca(ctx));
+    }
+    if(ctx.clients){
+      doc.addPage(); y = M;
+      titre("Synthèse client – exercice" + (E.base.clients.date ? " au " + dateFr(E.base.clients.date) : ""));
+      comparee(lignes(CLIENTS_LIGNES, ctx.clients));
+      sousTitre("Tendance du CA sur quatre exercices"); y += 2;
+      table(["Exercice","CA magasin","Écart","Réseau à périmètre comparable","Écart au réseau"],
+        tendanceCA(ctx.clients).map(x => [x.ex, fmt(x.val,"eur"), {t:fmtPct(x.ev), c:classe(x.ev, S_VIGIL)}, fmtPct(x.evR),
+          {t:x.ev !== null && x.evR !== null ? fmtPts(x.ev - x.evR) : "-", c:classe(x.ev !== null && x.evR !== null ? x.ev - x.evR : null, S_VIGIL)}]));
+      sousTitre("Lecture"); y += 3; cartes(lectureClients(ctx));
+    }
+    const dec = decomposition(ctx), cr = lectureCroisee(ctx);
+    if(dec || cr.length){ titre("Lecture croisée"); cartes((dec ? [dec.constat] : []).concat(cr)); }
+
+    const tous = tousConstats(ctx);
+    const forts = tous.filter(x => x.niveau === "favorable"), vigil = tous.filter(x => x.niveau === "vigilance" || x.niveau === "alerte");
+    doc.addPage(); y = M;
+    titre("Bilan " + libT());
+    if(forts.length){ sousTitre("Points forts"); y += 3; forts.forEach(x => para("+ " + x.titre, 9.2)); }
+    if(vigil.length){ sousTitre("Points de vigilance"); y += 3; vigil.forEach(x => para("- " + x.titre, 9.2)); }
+    if(E.lectureCR){ sousTitre("Lecture du CR"); y += 3; para(E.lectureCR); }
+    if(E.retourFranchise){ sousTitre("Retour du franchisé"); y += 3; para(E.retourFranchise); }
+
+    const s = trimestreSuivant();
+    titre("Feuille de route " + libTs());
+    const objs = OBJECTIFS.filter(o => E.objectifs[o.k] && (E.objectifs[o.k].obj !== null || E.objectifs[o.k].n1 !== null));
+    if(objs.length){
+      sousTitre("Objectifs chiffrés"); y += 2;
+      table(["Indicateur","Réalisé " + libT(),"N-1 " + s.t,"Objectif " + s.t,"Écart objectif / N-1"],
+        objs.map(o => { const x = E.objectifs[o.k], d = variation(o.fmt, x.obj, x.n1);
+          return [o.nom, fmt(o.real(ctx), o.fmt), fmt(x.n1, o.fmt), fmt(x.obj, o.fmt), {t:fmtVar(o.fmt, d), c:classe(d, seuilsEvol(o.fmt)[0])}]; }));
+    }
+    const pot = lignesPotentiel(ctx);
+    if(pot.some(x => x.val)){ sousTitre("Potentiel presta"); y += 2; table(["Levier","Gain magasin","Base de calcul"], pot.map(x => [x.nom, fmt(x.val,"eur"), x.aide]), {2:{halign:"left"}}); }
+    if(E.pa.length){
+      sousTitre("Plan d'action"); y += 2;
+      table(["Axe","Constat","Action","Resp.","Échéance","Indicateur","Prio"],
+        E.pa.map(l => [l.axe, l.constat, l.action, l.responsable, dateFr(l.echeance), l.indicateur, l.priorite]),
+        {0:{cellWidth:20, halign:"left"}, 1:{cellWidth:80, halign:"left", fontStyle:"normal"}, 2:{cellWidth:80, halign:"left"}, 3:{cellWidth:26, halign:"left"}, 4:{cellWidth:20}, 5:{halign:"left"}, 6:{cellWidth:10}});
+    }
+    if(E.prochainPoint) para("Prochain point de suivi : " + dateFr(E.prochainPoint), 9.5, true);
+    saut(34); y += 4;
+    const lb = (L - 10) / 2;
+    [["Visa du franchisé", M], ["Visa Narbonne Accessoires", M + lb + 10]].forEach(([t, x]) => {
+      doc.setDrawColor(220,227,234); doc.setLineWidth(0.3); doc.rect(x, y, lb, 26);
+      doc.setFont("helvetica","bold"); doc.setFontSize(8.5); doc.setTextColor(107,122,136); doc.text(net(t), x + 3, y + 5);
+    });
+    const total = doc.internal.getNumberOfPages();
+    for(let i = 1; i <= total; i++){
+      doc.setPage(i); doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(107,122,136);
+      doc.text(net("Bilan " + libT() + "  –  " + (E.magasin || "")), M, H - 6);
+      doc.text(i + " / " + total, W - M, H - 6, {align:"right"});
+    }
+    doc.save(nomFichier("pdf"));
+  }catch(err){ alert("Export PDF impossible : " + err.message); }
+  btn.textContent = avant;
+}
+
+/* ===== enregistrement ===== */
+function nomFichier(ext){
+  const code = codeMagasin().replace(/[^\w]/g,"") || "magasin";
+  return "BILAN_" + code + "_" + E.trimestre + "_" + (E.exercice || "exercice").replace(/[^\w-]/g,"") + "." + ext;
+}
+let minuteur = null;
+function sauver(){
+  clearTimeout(minuteur);
+  minuteur = setTimeout(() => {
+    if(!memo.ecrire(STOCKAGE, JSON.stringify(E))){
+      const c = document.getElementById("etat_cadre");
+      c.className = "etat sousimp ko";
+      c.textContent = "Mémoire du navigateur pleine : le bilan n'est plus enregistré automatiquement. Utilisez « Enregistrer ».";
+    }
+  }, 500);
+}
+function exportJSON(){
+  const paquet = {type:"bilan-fdr", schema:SCHEMA, enregistre:new Date().toISOString(), etat:E};
+  const blob = new Blob([JSON.stringify(paquet)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = nomFichier("json"); a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+function appliquer(d){
+  const vierge = etatVide();
+  Object.keys(vierge).forEach(k => E[k] = vierge[k]);
+  Object.keys(vierge).forEach(k => { if(d && d[k] !== undefined) E[k] = d[k]; });
+  E.base = Object.assign({perf:null, pmca:null, clients:null}, (d && d.base) || {});
+  E.schema = SCHEMA;
+}
+async function ouvrir(input){
+  const f = input.files && input.files[0];
+  if(!f) return;
+  try{
+    const d = JSON.parse(await f.text());
+    if(d.type !== "bilan-fdr" || !d.etat) throw new Error("ce fichier n'est pas un bilan enregistré depuis l'appli");
+    if(!confirm("Remplacer le bilan en cours par « " + f.name + " » ?")){ input.value = ""; return; }
+    appliquer(d.etat);
+    remplirMagasins(); remplirChamps(); toutCalculer(); rendrePA(); sauver();
+    const c = document.getElementById("etat_cadre"); c.className = "etat sousimp"; c.textContent = messageSources();
+  }catch(err){ alert("Ouverture impossible : " + err.message); }
+  input.value = "";
+}
+function remiseAZero(){
+  if(!confirm("Repartir sur un bilan vierge pour un autre magasin ?\n\nLes tableaux importés sont conservés. Magasin, commentaires, objectifs, plan d'action et mail sont effacés.")) return;
+  const garde = {base:E.base, trimestre:E.trimestre, exercice:E.exercice};
+  appliquer(garde);
+  E.date = new Date().toISOString().slice(0,10);
+  remplirChamps(); toutCalculer(); rendrePA(); sauver();
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+
+/* ===== démarrage ===== */
+const CHAMPS_LIBRES = [["trimestre","trimestre"],["exercice","exercice"],["magasin","magasin"],["dateBilan","date"],
+  ["franchise","franchise"],["participants","participants"],["lectureCR","lectureCR"],
+  ["retourFranchise","retourFranchise"],["prochainPoint","prochainPoint"],["texteFDR","fdr"]];
+function remplirChamps(){
+  CHAMPS_LIBRES.forEach(([id, k]) => { document.getElementById(id).value = E[k] || ""; });
+  majMots();
+}
+function demarrer(){
+  const brut = memo.lire(STOCKAGE);
+  let repris = false;
+  if(brut){ try{ const d = JSON.parse(brut); if(d && d.schema === SCHEMA){ appliquer(d); repris = true; } }catch(e){} }
+  if(!repris){
+    const auj = new Date(), dt = dernierTrimestreClos(auj);
+    E.trimestre = dt.t; E.exercice = libEx(dt.ex); E.date = auj.toISOString().slice(0,10);
+  }
+  remplirMagasins(); remplirChamps();
+  if(repris){ const c = document.getElementById("etat_cadre"); c.textContent = messageSources(); }
+
+  CHAMPS_LIBRES.forEach(([id, k]) => {
+    const el = document.getElementById(id);
+    el.addEventListener("change", () => {
+      E[k] = el.value;
+      if(["trimestre","exercice","magasin"].includes(k)) garderFocusApres(() => { toutCalculer(); rendrePA(); });
+      if(k === "fdr") majMots();
+      sauver();
+    });
+    if(el.tagName === "TEXTAREA") el.addEventListener("input", () => { E[k] = el.value; if(k === "fdr") majMots(); sauver(); });
+  });
+  document.addEventListener("change", e => {
+    const el = e.target;
+    if(!el.dataset) return;
+    if(el.dataset.id && el.dataset.id.startsWith("obj|")) majObjectif(el);
+    else if(el.dataset.pa !== undefined) majPA(el);
+  });
+  document.addEventListener("keydown", e => {
+    if(e.key === "Enter" && e.target.classList && e.target.classList.contains("saisie")){ e.preventDefault(); e.target.blur(); }
+  });
+  toutCalculer(); rendrePA();
+}
+demarrer();
+
+if("serviceWorker" in navigator && location.protocol === "https:"){
+  window.addEventListener("load", () => { navigator.serviceWorker.register("./sw.js").catch(() => {}); });
+}
+
+</script>
+</body>
+</html>
