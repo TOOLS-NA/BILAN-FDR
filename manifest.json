@@ -1,0 +1,16 @@
+{
+  "name": "Bilan et feuille de route franchisé",
+  "short_name": "Bilan FDR",
+  "description": "Bilan trimestriel franchisé : perfs ACC et Presta, PMCA, synthèse client, objectifs et plan d'action.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#F4F6F9",
+  "theme_color": "#0E2C49",
+  "lang": "fr",
+  "icons": [
+    { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}
