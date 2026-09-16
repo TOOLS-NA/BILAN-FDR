@@ -121,9 +121,12 @@ h3.sousTitre{margin:16px 0 6px;font-size:13px;font-weight:700;color:var(--gris)}
 .d.neu{color:var(--gris)}
 .tb td.colBarre{width:100px}
 .tb td{white-space:nowrap}
-.tb td.sec{color:var(--gris)}
+.tb td.sec,.tb tr.sec td{color:var(--gris)}
 .second{font-size:11px;color:var(--gris);font-weight:400}
 .tb td b{color:var(--encre)}
+.hcase{display:inline-flex;align-items:center;gap:5px;font-size:13px;color:#fff;white-space:nowrap;cursor:pointer}
+.hcase input{width:auto;accent-color:var(--vert)}
+#groupement{flex:1 1 220px;min-width:0}
 .barreD{position:relative;display:inline-block;width:90px;height:8px;background:#EEF2F6;border-radius:4px;vertical-align:middle}
 .barreD::after{content:"";position:absolute;left:50%;top:-3px;bottom:-3px;width:1px;background:#9AA8B5}
 .barreD i{position:absolute;top:0;bottom:0;background:var(--gris)}
@@ -179,8 +182,8 @@ h3.sousTitre{margin:16px 0 6px;font-size:13px;font-weight:700;color:var(--gris)}
       <option>T1</option><option>T2</option><option>T3</option><option>T4</option>
     </select>
     <input type="text" id="exercice" aria-label="Exercice" placeholder="2025-2026">
-    <input type="text" id="magasin" list="listeMag" aria-label="Magasin" placeholder="Magasin (code ou nom)">
-    <datalist id="listeMag"></datalist>
+    <select id="groupement" aria-label="Groupement"><option value="">Importez l'Evol OSS Facturé</option></select>
+    <label class="hcase" id="libStep2" title="Ajouter au bilan les magasins STEP2 du groupement"><input type="checkbox" id="step2"> STEP2</label>
     <input type="date" id="dateBilan" aria-label="Date du bilan">
     <div class="hactions">
       <button class="hbtn ghost" onclick="remiseAZero()">RAZ</button>
@@ -198,20 +201,33 @@ h3.sousTitre{margin:16px 0 6px;font-size:13px;font-weight:700;color:var(--gris)}
 <!-- CADRE -->
 <section class="pilote">
   <h2>Cadre du bilan
-    <label class="imp" style="margin-left:auto" title="Performance CA version Pabad, PMCA 12 mois glissants, Synthèse client. Les trois d'un coup ou séparément.">Importer les tableaux
+    <label class="imp" style="margin-left:auto" title="Evol OSS Facturé, Performance CA version Pabad, PMCA 12 mois glissants, Synthèse client. Tous d'un coup ou séparément.">Importer les tableaux
       <input type="file" accept=".xlsx,.xlsm" multiple onchange="importer(this,'cadre')">
     </label>
   </h2>
   <p class="sous" id="sousCadre"></p>
-  <p class="etat sousimp" id="etat_cadre">Importez les trois tableaux réseau, puis choisissez le magasin dans l'en-tête. Chaque tableau est reconnu automatiquement.</p>
+  <p class="etat sousimp" id="etat_cadre">Importez les tableaux réseau (Evol OSS Facturé, Performance, PMCA, Synthèse client), puis choisissez le groupement dans l'en-tête. Chaque tableau est reconnu automatiquement.</p>
   <div class="duo">
-    <div><label class="champ" for="franchise">Franchisé</label><input type="text" id="franchise"></div>
+    <div><label class="champ" for="franchise">Dirigeant du groupement</label><input type="text" id="franchise"></div>
     <div><label class="champ" for="participants">Participants au point</label><input type="text" id="participants"></div>
   </div>
   <div class="puces" id="sources" style="margin-top:12px"></div>
 </section>
 
-<!-- 1. PERFS ACC ET PRESTA -->
+<!-- 1. OSS -->
+<section>
+  <h2>OSS et facturé
+    <label class="imp" style="margin-left:auto" title="Evol OSS Facturé INT FRA et STEP2 (.xlsx).">Import
+      <input type="file" accept=".xlsx,.xlsm" multiple onchange="importer(this,'oss')">
+    </label>
+  </h2>
+  <p class="etat sousimp" id="etat_oss"></p>
+  <div id="corps_oss"></div>
+  <h3 class="sousTitre">Lecture</h3>
+  <div id="lecture_oss"></div>
+</section>
+
+<!-- 2. PERFS ACC ET PRESTA -->
 <section>
   <h2>Perfs ACC et Presta
     <label class="imp" style="margin-left:auto" title="Performance CA version Pabad (.xlsm).">Import
@@ -224,7 +240,7 @@ h3.sousTitre{margin:16px 0 6px;font-size:13px;font-weight:700;color:var(--gris)}
   <div id="lecture_perf"></div>
 </section>
 
-<!-- 2. PMCA -->
+<!-- 3. PMCA -->
 <section>
   <h2>PMCA
     <label class="imp" style="margin-left:auto" title="PMCA 12 mois glissants, onglets N et N-1.">Import
@@ -237,7 +253,7 @@ h3.sousTitre{margin:16px 0 6px;font-size:13px;font-weight:700;color:var(--gris)}
   <div id="lecture_pmca"></div>
 </section>
 
-<!-- 3. SYNTHÈSE CLIENT -->
+<!-- 4. SYNTHÈSE CLIENT -->
 <section>
   <h2>Synthèse client
     <label class="imp" style="margin-left:auto" title="Synthèse client de fin d'exercice.">Import
@@ -253,7 +269,7 @@ h3.sousTitre{margin:16px 0 6px;font-size:13px;font-weight:700;color:var(--gris)}
 <!-- LECTURE CROISÉE -->
 <section class="pilote">
   <h2>Lecture croisée</h2>
-  <p class="sous">L'évolution du CA sur 12 mois se décompose en nombre de clients, fréquence d'achat et PMF. Les trois tableaux sont aussi rapprochés pour vérifier qu'ils racontent la même chose.</p>
+  <p class="sous">L'évolution du CA sur 12 mois se décompose en nombre de clients, fréquence d'achat et PMF. Les tableaux sont aussi rapprochés pour vérifier qu'ils racontent la même chose.</p>
   <div id="croisee"></div>
 </section>
 
@@ -304,7 +320,7 @@ h3.sousTitre{margin:16px 0 6px;font-size:13px;font-weight:700;color:var(--gris)}
 <!-- MAIL -->
 <section class="actions">
   <h2>Mail de bilan et feuille de route</h2>
-  <p class="sous">Adressé au franchisé. Recomposé à partir des chiffres, du bilan et du plan d'action, modifiable avant envoi.</p>
+  <p class="sous">Adressé au dirigeant du groupement. Recomposé à partir des chiffres, du bilan et du plan d'action, modifiable avant envoi.</p>
   <div class="barre" style="margin-top:0">
     <button class="btn" onclick="composerFDR()">Composer le mail</button>
     <button class="btn sec" onclick="copierFDR()">Copier</button>
@@ -326,8 +342,8 @@ const ECART_VALEUR = [0.10, 0.20];     // écart au réseau sur une valeur (CA p
 const ECART_TAUX = [0.02, 0.05];       // écart au réseau sur un taux, en points
 const TX_FA_CIBLE = 0.045;             // repris de l'entête « Gain FA € // Tx de FA 4,5% »
 const MOTS_MAX = 1000;
-const STOCKAGE = "bfr:brouillon";
-const SCHEMA = 2;
+const STOCKAGE = "bfr:brouillon3";
+const SCHEMA = 3;
 
 const RESPONSABLES = ["Franchisé","Responsable magasin","Chef d'atelier","Équipe de vente","CR"];
 const AXES = ["Perf ACC","Presta","PMCA","Clients","Autre"];
@@ -338,8 +354,8 @@ const AUTOTABLE_URL = "https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.
 /* ===== état ===== */
 function etatVide(){
   return {
-    schema:SCHEMA, trimestre:"T4", exercice:"", magasin:"", date:"", franchise:"", participants:"",
-    base:{perf:null, pmca:null, clients:null},
+    schema:SCHEMA, trimestre:"T4", exercice:"", groupement:"", step2:false, date:"", franchise:"", participants:"",
+    base:{oss:null, perf:null, pmca:null, clients:null},
     lectureCR:"", retourFranchise:"", objectifs:{}, pa:[], prochainPoint:"", fdr:""
   };
 }
@@ -880,14 +896,175 @@ function agregatClients(liste){
   return derivesClients(v);
 }
 
+/* --- Evol OSS Facturé (onglet « Synthèse Semaine Fac + OSS » et « Index ») --- */
+const OSS_ANNEE = [
+  ["one-shot sur la periode","os"], ["commande issue du portefeuille","portFacture"], ["facture sur la periode","facture"],
+  ["prev ca","prev"], ["nbre fac one-shot","nbFacOs"], ["pm os","pmOs"], ["nbre cdc signe","nbSigne"], ["pm signe","pmSigne"],
+  ["signe ensemble des commandes","signe"], ["poids du nbre de client signe","poidsSigne"], ["signe / oss","signeSurOss"],
+  ["oss creation de valeur","oss"], ["signe salon svdl","salonSvdl"], ["signe salon regional","salonReg"],
+  ["oss hors salons","ossHorsSalon"], ["oss / prev ca","ossSurPrev"]
+];
+const OSS_SOMMES = ["os","portFacture","facture","prev","nbFacOs","nbSigne","signe","oss","salonSvdl","salonReg","ossHorsSalon"];
+const FEUILLE_OSS = "synthese semaine fac + oss";
+
+function statutReseau(t){
+  const s = nk(t);
+  if(/step ?2|^s2$/.test(s)) return "S2";
+  if(/fra/.test(s)) return "F";
+  if(/int/.test(s)) return "I";
+  return "";
+}
+function cleOss(lab){ const x = OSS_ANNEE.find(p => lab === p[0] || lab.startsWith(p[0] + " ")); return x ? x[1] : null; }
+function cleTrimestre(lab){
+  if(lab === "ca n-1 rea") return "n1";
+  if(lab === "ca n prev") return "prev";
+  if(lab === "ca n rea") return "real";
+  if(lab.startsWith("portfeuille n-1") || lab.startsWith("portefeuille n-1")) return "portN1";
+  if(/^porte?feuille n( |$)/.test(lab)) return "portN";
+  return null;
+}
+function cleCumul(lab){
+  return {"ca n-1 exo":"caN1Exo", "ca n exo prev":"prevExo", "ca n-1 a date":"caN1Date", "portfeuille n-1 a fin mois":"portN1",
+    "ca n a date":"caNDate", "portfeuille n a date":"portN"}[lab.replace("portefeuille","portfeuille")] || null;
+}
+
+function lireOss(feuilles, fichier){
+  const fe = feuilles.find(x => nk(x.nom) === FEUILLE_OSS);
+  if(!fe) return null;
+  const t = fe.table;
+  let h = -1;
+  for(let i = 0; i < Math.min(t.length, 15); i++){
+    const n = (t[i] || []).map(nk);
+    if(n.includes("dimsitecodenom") && n.includes("groupement")){ h = i; break; }
+  }
+  if(h < 2) return null;
+  const n = t[h].map(nk), larg = Math.max(t[h].length, (t[h-1] || []).length);
+  const iRes = n.indexOf("reseau"), iPer = n.indexOf("perimetre"), iCr = n.indexOf("cr"), iGrp = n.indexOf("groupement"), iSite = n.indexOf("dimsitecodenom");
+  const cols = [], labels = [];
+  let per = "", grp = "";
+  for(let c = 0; c < larg; c++){
+    const p = String((t[h-1] || [])[c] || "").trim(); if(p) per = p;
+    const g = String((t[h-2] || [])[c] || "").trim(); if(g) grp = nk(g);
+    const lab = nk(t[h][c]);
+    if(!lab || c <= iSite) continue;
+    const np = nk(per);
+    if(/^20\d\d$/.test(per)){ const k = cleOss(lab); if(k) cols.push({c:c, type:"an", an:per, k:k}); }
+    else if(np === "n vs n-1" && /^s\d+-s\d+$/.test(lab)){
+      const pct = grp.startsWith("%");
+      cols.push({c:c, type: pct ? "hsPct" : "hsEur", lab:t[h][c].trim().toUpperCase()});
+      if(pct) labels.push(t[h][c].trim().toUpperCase());
+    }
+    else if(/^t[1-4]$/i.test(per)){ const k = cleTrimestre(lab); if(k) cols.push({c:c, type:"q", q:per.toUpperCase(), k:k}); }
+    else if(np === "fixe" || np === "cumul a date"){ const k = cleCumul(lab); if(k) cols.push({c:c, type:"cum", k:k}); }
+  }
+  const annees = [...new Set(cols.filter(x => x.type === "an").map(x => x.an))].sort();
+  if(!annees.length) return null;
+  const lire = r => {
+    const v = {an:{}, q:{}, hsPct:{}, hsEur:{}, cum:{}};
+    annees.forEach(a => v.an[a] = {});
+    cols.forEach(x => {
+      const val = nombre(r[x.c]);
+      if(x.type === "an"){ if(v.an[x.an][x.k] === undefined) v.an[x.an][x.k] = val; }
+      else if(x.type === "q"){ v.q[x.q] = v.q[x.q] || {}; if(v.q[x.q][x.k] === undefined) v.q[x.q][x.k] = val; }
+      else if(x.type === "hsPct") v.hsPct[x.lab] = val;
+      else if(x.type === "hsEur") v.hsEur[x.lab] = val;
+      else if(x.type === "cum" && v.cum[x.k] === undefined) v.cum[x.k] = val;
+    });
+    return v;
+  };
+  const m = fichier.match(/(20\d\d)[_\-.]?(\d\d)[_\-.]?(\d\d)/);
+  const b = {type:"oss", fichier:fichier, date: m ? m[1] + "-" + m[2] + "-" + m[3] : "", annees:annees, quinzaines:labels,
+    sites:{}, totaux:{}, index:{}};
+  t.slice(h + 1).forEach(r => {
+    if(!r || !r.length) return;
+    const res = String(r[iRes] || "").trim(), site = String(r[iSite] || "").trim();
+    if(/^total /i.test(res)){
+      const st = /g.n.ral/i.test(res) ? "TOUT" : statutReseau(res.replace(/^total /i, ""));
+      if(st && !b.totaux[st]) b.totaux[st] = lire(r);
+      return;
+    }
+    const cd = codeSite(site);
+    if(!cd || b.sites[cd]) return;
+    b.sites[cd] = {code:cd, site:site, statut:statutReseau(res), perimetre:String(r[iPer] || "").trim(),
+      cr:String(r[iCr] || "").trim(), groupement:String(r[iGrp] || "").trim(), v:lire(r)};
+  });
+  const ix = feuilles.find(x => nk(x.nom) === "index");
+  if(ix){
+    const ti = ix.table;
+    const hi = ti.findIndex(r => (r || []).map(nk).includes("groupement"));
+    if(hi >= 0){
+      const ni = ti[hi].map(nk);
+      const col = p => ni.findIndex(x => x === p || x.startsWith(p + " "));
+      const cCode = col("code"), cSite = col("dimsitecodenom"), cRes = col("reseau"), cPer = col("perimetre"), cGrp = ni.indexOf("groupement"), cCr = ni.indexOf("cr");
+      ti.slice(hi + 1).forEach(r => {
+        const site = String(r[cSite] || "").trim();
+        const cd = codeSite(site) || String(r[cCode] || "").trim().toUpperCase();
+        if(!cd || b.index[cd]) return;
+        b.index[cd] = {code:cd, site:site, statut:statutReseau(r[cRes]), perimetre:String(r[cPer] || "").trim(),
+          groupement:String(r[cGrp] || "").trim(), cr:String(r[cCr] || "").trim()};
+      });
+    }
+  }
+  return Object.keys(b.sites).length ? b : null;
+}
+
+/* agrégat OSS : sommes par année, ratios recalculés, trimestres et quinzaines additionnés */
+function agregatOss(liste){
+  if(!liste.length) return null;
+  const v = {an:{}, q:{}, hsPct:{}, hsEur:{}, cum:{}};
+  const somme = (vals) => { const x = vals.filter(y => fini(y) !== null); return x.length ? x.reduce((a, c) => a + c, 0) : null; };
+  const annees = Object.keys(liste[0].an);
+  annees.forEach(a => {
+    const o = {};
+    OSS_SOMMES.forEach(k => o[k] = somme(liste.map(s => s.an[a] ? s.an[a][k] : null)));
+    o.pmOs = div(o.os, o.nbFacOs); o.pmSigne = div(o.signe, o.nbSigne);
+    o.poidsSigne = div(o.nbSigne, o.nbFacOs); o.signeSurOss = div(o.signe, o.oss); o.ossSurPrev = div(o.oss, o.prev);
+    v.an[a] = o;
+  });
+  ["T1","T2","T3","T4"].forEach(q => {
+    const o = {};
+    ["n1","prev","real","portN1","portN"].forEach(k => o[k] = somme(liste.map(s => s.q[q] ? s.q[q][k] : null)));
+    v.q[q] = o;
+  });
+  ["caN1Exo","prevExo","caN1Date","portN1","caNDate","portN"].forEach(k => v.cum[k] = somme(liste.map(s => s.cum[k])));
+  Object.keys(liste[0].hsEur).forEach(lab => {
+    const eur = somme(liste.map(s => s.hsEur[lab]));
+    // base N-1 de chaque magasin retrouvée à partir de son écart en € et en %
+    const base = somme(liste.map(s => (fini(s.hsPct[lab]) && s.hsPct[lab] !== 0 && fini(s.hsEur[lab]) !== null) ? s.hsEur[lab] / s.hsPct[lab] : null));
+    v.hsEur[lab] = eur; v.hsPct[lab] = liste.length === 1 ? liste[0].hsPct[lab] : div(eur, base);
+  });
+  return v;
+}
+
+/* --- PMCA : agrégat de plusieurs magasins --- */
+function agregatPmca(liste){
+  liste = liste.filter(Boolean);
+  if(!liste.length) return null;
+  const out = {};
+  PMCA_TYPES.forEach(t => ["T","D","HD"].forEach(p => {
+    const h = {};
+    let vu = false;
+    ["nbCli","nbFac","ca","mg"].forEach(k => {
+      const vals = liste.map(m => m[t] && m[t][p] ? fini(m[t][p][k]) : null).filter(x => x !== null);
+      h[k] = vals.length ? vals.reduce((a, c) => a + c, 0) : null;
+      if(vals.length) vu = true;
+    });
+    if(!vu) return;
+    h.pmca = div(h.ca, h.nbCli); h.freq = div(h.nbFac, h.nbCli); h.pmf = div(h.ca, h.nbFac); h.txMg = div(h.mg, h.ca);
+    h.rang = liste.length === 1 && liste[0][t] && liste[0][t][p] ? fini(liste[0][t][p].rang) : null;
+    out[t] = out[t] || {}; out[t][p] = h;
+  }));
+  return out;
+}
+
 /* ===== import ===== */
 async function feuillesDuFichier(f){
   const cl = await ouvrirClasseur(f);
+  const estOss = cl.feuilles.some(x => nk(x.nom) === FEUILLE_OSS);
+  // le fichier OSS pèse plusieurs centaines de Mo décompressé : on ne lit que la synthèse et l'index
+  const cibles = estOss ? cl.feuilles.filter(x => [FEUILLE_OSS, "index"].includes(nk(x.nom))) : cl.feuilles.filter(x => !x.cachee);
   const out = [];
-  for(const fe of cl.feuilles){
-    if(fe.cachee) continue;
-    out.push({nom:fe.nom, cachee:false, table: await cl.lire(fe.nom)});
-  }
+  for(const fe of cibles) out.push({nom:fe.nom, cachee:fe.cachee, table: await cl.lire(fe.nom)});
   return out;
 }
 
@@ -901,31 +1078,34 @@ async function importer(input, zone){
   for(const f of fichiers){
     try{
       const feuilles = await feuillesDuFichier(f);
-      const perf = lirePerf(feuilles, f.name);
-      const pmca = perf ? null : lirePmca(feuilles, f.name);
-      const cli = (perf || pmca) ? null : lireClients(feuilles, f.name);
-      if(perf){
-        E.base.perf = perf; ok++;
+      const oss = lireOss(feuilles, f.name);
+      const perf = oss ? null : lirePerf(feuilles, f.name);
+      const pmca = (oss || perf) ? null : lirePmca(feuilles, f.name);
+      const cli = (oss || perf || pmca) ? null : lireClients(feuilles, f.name);
+      let m = "", cible = "";
+      if(oss){
+        E.base.oss = oss; ok++; cible = "oss";
+        m = f.name + " : Evol OSS Facturé" + (oss.date ? " au " + dateFr(oss.date) : "") + ", années fiscales " + oss.annees.join(" et ") +
+          ", " + Object.keys(oss.sites).length + " sites, " + listeGroupements().length + " groupements";
+      } else if(perf){
+        E.base.perf = perf; ok++; cible = "perf";
         if(perf.trimestre) E.trimestre = perf.trimestre;
         if(perf.exercice) E.exercice = perf.exercice;
-        msg.push(f.name + " : Performance " + (perf.trimestre ? perf.trimestre + " cumulé " + perf.exercice : "") + ", " +
-          Object.keys(perf.sites).length + " sites dont " + Object.values(perf.sites).filter(s => s.statut === "F").length + " franchisés");
-        document.getElementById("etat_perf").textContent = msg[msg.length-1];
+        m = f.name + " : Performance " + (perf.trimestre ? perf.trimestre + " cumulé " + perf.exercice : "") + ", " +
+          Object.keys(perf.sites).length + " sites dont " + Object.values(perf.sites).filter(s => s.statut === "F").length + " franchisés";
       } else if(pmca){
-        const saisons = Object.keys(pmca.saisons).sort();
-        // un fichier PMCA qui n'apporte qu'une saison complète celui déjà en place
-        if(E.base.pmca && saisons.length === 1) Object.assign(E.base.pmca.saisons, pmca.saisons);
+        if(E.base.pmca && Object.keys(pmca.saisons).length === 1) Object.assign(E.base.pmca.saisons, pmca.saisons);
         else E.base.pmca = pmca;
-        ok++;
-        msg.push(f.name + " : PMCA 12 mois glissants, saisons " + Object.keys(E.base.pmca.saisons).sort().join(" et "));
-        document.getElementById("etat_pmca").textContent = msg[msg.length-1];
+        ok++; cible = "pmca";
+        m = f.name + " : PMCA 12 mois glissants, saisons " + Object.keys(E.base.pmca.saisons).sort().join(" et ");
       } else if(cli){
-        E.base.clients = cli; ok++;
-        msg.push(f.name + " : Synthèse client" + (cli.date ? " au " + dateFr(cli.date) : "") + ", " + Object.keys(cli.sites).length + " sites");
-        document.getElementById("etat_clients").textContent = msg[msg.length-1];
+        E.base.clients = cli; ok++; cible = "clients";
+        m = f.name + " : Synthèse client" + (cli.date ? " au " + dateFr(cli.date) : "") + ", " + Object.keys(cli.sites).length + " sites";
       } else {
-        msg.push(f.name + " : tableau non reconnu (attendu : Performance CA, PMCA 12 mois glissants ou Synthèse client)");
+        m = f.name + " : tableau non reconnu (attendu : Evol OSS Facturé, Performance CA, PMCA 12 mois glissants ou Synthèse client)";
       }
+      msg.push(m);
+      if(cible){ const e = document.getElementById("etat_" + cible); if(e){ e.className = "etat sousimp"; e.textContent = m; } }
     }catch(err){
       msg.push(f.name + " non lu : " + err.message);
     }
@@ -933,49 +1113,71 @@ async function importer(input, zone){
   input.value = "";
   et.className = "etat sousimp " + (ok === fichiers.length ? "ok" : "ko");
   et.textContent = msg.join(" · ");
-  if(zone !== "cadre"){
-    const c = document.getElementById("etat_cadre");
-    c.className = "etat sousimp"; c.textContent = messageSources();
-  }
-  remplirMagasins();
-  if(!E.magasin){
-    const liste = listeMagasins().filter(m => m.statut === "F");
-    if(liste.length === 1) E.magasin = liste[0].libelle;
-  }
+  if(zone !== "cadre"){ const c = document.getElementById("etat_cadre"); c.className = "etat sousimp"; c.textContent = messageSources(); }
+  remplirGroupements();
   remplirChamps(); toutCalculer(); rendrePA(); sauver();
 }
 
 function messageSources(){
   const b = E.base, out = [];
+  if(b.oss) out.push("Evol OSS Facturé" + (b.oss.date ? " au " + dateFr(b.oss.date) : ""));
   if(b.perf) out.push("Performance " + (b.perf.trimestre || "") + " " + (b.perf.exercice || ""));
   if(b.pmca) out.push("PMCA " + Object.keys(b.pmca.saisons).sort().join(" / "));
   if(b.clients) out.push("Synthèse client" + (b.clients.date ? " au " + dateFr(b.clients.date) : ""));
   return out.length ? "En place : " + out.join(", ") + "." : "Aucun tableau importé.";
 }
 
-/* ===== magasin choisi ===== */
-function listeMagasins(){
-  const vus = {};
-  const ajout = s => { if(s && !vus[s.code]) vus[s.code] = {code:s.code, libelle:s.site, statut:s.statut}; };
-  const b = E.base;
-  if(b.perf) Object.values(b.perf.sites).forEach(ajout);
-  if(b.clients) Object.values(b.clients.sites).forEach(ajout);
-  if(b.pmca) Object.values(b.pmca.saisons).forEach(sa => Object.values(sa.sites).forEach(ajout));
-  return Object.values(vus).sort((a, c) => (a.statut === "F" ? 0 : 1) - (c.statut === "F" ? 0 : 1) || a.code.localeCompare(c.code));
+/* ===== groupements ===== */
+const GROUPEMENTS_EXCLUS = ["ferme","hors analyse","masse",""];
+/* référentiel des sites : l'index du fichier OSS fait foi, le PMCA sert de repli */
+function referentiel(){
+  const r = {}, b = E.base;
+  if(b.oss){
+    Object.values(b.oss.index || {}).forEach(x => { if(x.groupement) r[x.code] = Object.assign({}, x); });
+    Object.values(b.oss.sites).forEach(s => { if(!r[s.code]) r[s.code] = {code:s.code, site:s.site, statut:s.statut, groupement:s.groupement, cr:s.cr, perimetre:s.perimetre}; });
+  } else if(b.pmca){
+    const sp = saisonsPmca();
+    Object.values(sp.N.sites).forEach(s => { r[s.code] = {code:s.code, site:s.site, statut:s.statut, groupement:s.groupement, cr:s.tribu}; });
+  }
+  const nom = c => (b.perf && b.perf.sites[c] && b.perf.sites[c].site) || (b.clients && b.clients.sites[c] && b.clients.sites[c].site) || "";
+  Object.values(r).forEach(x => { if(!x.site || !codeSite(x.site)) x.site = nom(x.code) || x.site || x.code; });
+  return r;
 }
-function remplirMagasins(){
-  document.getElementById("listeMag").innerHTML = listeMagasins()
-    .map(m => "<option value='" + esc(m.libelle) + "'>" + esc(m.statut === "F" ? "Franchisé" : m.statut === "I" ? "Intégré" : m.statut) + "</option>").join("");
+function listeGroupements(){
+  const ref = referentiel(), g = {};
+  Object.values(ref).forEach(x => {
+    if(!["F","S2"].includes(x.statut)) return;
+    if(GROUPEMENTS_EXCLUS.includes(nk(x.groupement)) || nk(x.cr) === "hors analyse") return;
+    const cle = nk(x.groupement);
+    g[cle] = g[cle] || {cle:cle, nom:x.groupement, F:[], S2:[]};
+    g[cle][x.statut].push(x.code);
+  });
+  return Object.values(g).sort((a, b) => (b.F.length ? 1 : 0) - (a.F.length ? 1 : 0) || a.nom.localeCompare(b.nom));
 }
-function codeMagasin(){
-  const s = String(E.magasin || "").trim();
-  if(!s) return "";
-  const c = codeSite(s);
-  if(c) return c;
-  const cible = nk(s);
-  const trouve = listeMagasins().find(m => m.code.toLowerCase() === cible || nk(m.libelle).includes(cible));
-  return trouve ? trouve.code : s.toUpperCase();
+function groupementChoisi(){
+  const l = listeGroupements();
+  return l.find(x => x.cle === nk(E.groupement)) || null;
 }
+function membres(g, avecStep2){
+  if(!g) return [];
+  return g.F.concat((avecStep2 || !g.F.length) ? g.S2 : []);
+}
+function remplirGroupements(){
+  const sel = document.getElementById("groupement");
+  const l = listeGroupements();
+  const opt = x => "<option value='" + esc(x.nom) + "'>" + esc(x.nom) + " (" + x.F.length + (x.S2.length ? " + " + x.S2.length + " STEP2" : "") + ")</option>";
+  const f = l.filter(x => x.F.length), s = l.filter(x => !x.F.length);
+  sel.innerHTML = "<option value=''>" + (l.length ? "Choisir un groupement" : "Importez l'Evol OSS Facturé") + "</option>" +
+    (f.length ? "<optgroup label='Franchisés'>" + f.map(opt).join("") + "</optgroup>" : "") +
+    (s.length ? "<optgroup label='STEP2 uniquement'>" + s.map(opt).join("") + "</optgroup>" : "");
+  const g = groupementChoisi();
+  sel.value = g ? g.nom : "";
+  const c = document.getElementById("step2");
+  c.checked = !!E.step2;
+  c.disabled = !g || !g.S2.length || !g.F.length;
+  document.getElementById("libStep2").style.opacity = c.disabled ? .5 : 1;
+}
+function slugGroupement(){ return (E.groupement || "groupement").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^\w]+/g,"-").replace(/^-|-$/g,""); }
 
 /* ===== indicateurs affichés =====
    n1 / prev / real : lecture d'une valeur dans l'objet du magasin (ou du réseau).
@@ -1042,7 +1244,37 @@ const CLIENTS_LIGNES = [
   {k:"portSurCa",  nom:"Portefeuille / CA",          fmt:"pct",  real:v => v.portSurCa, niveau:true}
 ];
 
-/* ===== contexte du magasin choisi ===== */
+/* --- OSS --- */
+function oy(v, p, k){ return (v && v[p]) ? fini(v[p][k]) : null; }
+function ligneOss(k, nom, fmt, opts){
+  return Object.assign({k:k, nom:nom, fmt:fmt, n1:v => oy(v,"N1",k), real:v => oy(v,"N",k)}, opts || {});
+}
+const OSS_LIGNES = [
+  ligneOss("facture", "Facturé (ACC + presta)", "eur", {prev:v => Z(oy(v,"N","prev"))}),
+  ligneOss("oss", "OSS création de valeur", "eur"),
+  ligneOss("ossSurPrev", "OSS / Prév CA", "pct"),
+  ligneOss("os", "One-Shot", "eur"),
+  ligneOss("nbFacOs", "Nb factures One-Shot", "ent", {moyenne:true}),
+  ligneOss("pmOs", "PM OS", "eur2"),
+  ligneOss("signe", "Signé", "eur"),
+  ligneOss("nbSigne", "Nb CDC signé", "ent", {moyenne:true}),
+  ligneOss("pmSigne", "PM signé", "eur2"),
+  ligneOss("poidsSigne", "Clients signés / clients One-Shot", "pct"),
+  ligneOss("signeSurOss", "Signé / OSS", "pct"),
+  ligneOss("portFacture", "Facturé issu du portefeuille", "eur"),
+  ligneOss("ossHorsSalon", "OSS hors salons", "eur"),
+  {k:"salons", nom:"Signé en salons (SVDL + régional)", fmt:"eur",
+    n1:v => v && v.N1 ? (fini(v.N1.salonSvdl) || 0) + (fini(v.N1.salonReg) || 0) : null,
+    real:v => v && v.N ? (fini(v.N.salonSvdl) || 0) + (fini(v.N.salonReg) || 0) : null},
+  {k:"portN", nom:"Portefeuille à date", fmt:"eur", n1:v => v && v.cum ? fini(v.cum.portN1) : null, real:v => v && v.cum ? fini(v.cum.portN) : null}
+];
+function vueOss(v, annees){
+  if(!v) return null;
+  const aN = annees[annees.length-1], aN1 = annees.length > 1 ? annees[annees.length-2] : null;
+  return {N:v.an[aN] || null, N1:aN1 ? v.an[aN1] || null : null, q:v.q, hsPct:v.hsPct, hsEur:v.hsEur, cum:v.cum};
+}
+
+/* ===== contexte du groupement choisi ===== */
 function saisonsPmca(){
   const b = E.base.pmca;
   if(!b) return null;
@@ -1052,64 +1284,80 @@ function saisonsPmca(){
 }
 function libTribu(t){ const s = String(t || "").trim(); return /^tribu\s/i.test(s) ? "Tribu " + s.replace(/^tribu\s+/i, "") : "Tribu " + s; }
 function libStatut(st, pluriel){
-  const l = {F:["franchisé","franchisés"], I:["intégré","intégrés"], S2:["S2","S2"]}[st];
+  const l = {F:["franchisé","franchisés"], I:["intégré","intégrés"], S2:["STEP2","STEP2"]}[st];
   return l ? l[pluriel ? 1 : 0] : st;
 }
+
 function contexte(){
-  const code = codeMagasin(), b = E.base, ctx = {code:code};
-  if(!code) return ctx;
-  if(b.perf && b.perf.sites[code]){
-    const s = b.perf.sites[code];
-    const pairs = Object.values(b.perf.sites).filter(x => x.statut === s.statut);
-    const tribu = Object.values(b.perf.sites).filter(x => x.tribu === s.tribu && x.statut !== "S2");
-    ctx.perf = {s:s, v:s.v, pairs:pairs.map(x => x.v), statut:s.statut,
-      refs:[{nom:"Réseau " + s.statut, v:b.perf.totaux[s.statut] || agregatPerf(pairs), n:pairs.length},
-            {nom:"Tribu " + s.tribu, v:agregatPerf(tribu), n:tribu.length}]};
+  const g = groupementChoisi(), b = E.base, ctx = {g:g, codes:[]};
+  if(!g) return ctx;
+  const codes = membres(g, E.step2), ref = referentiel();
+  const autres = listeGroupements().filter(x => x.F.length).map(x => membres(x, E.step2));
+  ctx.codes = codes;
+  ctx.nomSite = c => (ref[c] && ref[c].site) || c;
+  const partie = (sites, agreg, refs, pairsDe, details) => sites.length ? {v:agreg(sites), n:sites.length, sites:sites, refs:refs, details:details,
+    pairs:autres.map(cs => { const l = pairsDe(cs); return l.length ? {v:agreg(l), n:l.length} : null; }).filter(Boolean)} : null;
+
+  if(b.oss){
+    const an = b.oss.annees;
+    const pris = cs => cs.map(c => b.oss.sites[c]).filter(Boolean).map(s => s.v);
+    const sitesF = Object.values(b.oss.sites).filter(s => s.statut === "F" && nk(s.cr) !== "hors analyse");
+    const c = partie(pris(codes), l => vueOss(agregatOss(l), an),
+      [{nom:"Réseau F", v:vueOss(b.oss.totaux.F || agregatOss(sitesF.map(s => s.v)), an), n:sitesF.length}], pris,
+      codes.filter(cd => b.oss.sites[cd]).map(cd => ({code:cd, site:b.oss.sites[cd].site, v:vueOss(b.oss.sites[cd].v, an)})));
+    if(c) ctx.oss = c;
+  }
+  if(b.perf){
+    const pris = cs => cs.map(c => b.perf.sites[c]).filter(Boolean);
+    const sitesF = Object.values(b.perf.sites).filter(s => s.statut === "F");
+    const c = partie(pris(codes), agregatPerf, [{nom:"Réseau F", v:b.perf.totaux.F || agregatPerf(sitesF), n:sitesF.length}], pris,
+      pris(codes).map(s => ({code:s.code, site:s.site, v:s.v})));
+    if(c){ c.reseauSites = sitesF; ctx.perf = c; }
   }
   const sp = saisonsPmca();
-  if(sp && sp.N.sites[code]){
-    const s = sp.N.sites[code];
-    const comp = c => ({N: sp.N.sites[c] ? sp.N.sites[c].m : null, N1: sp.N1 && sp.N1.sites[c] ? sp.N1.sites[c].m : null});
-    const tot = k => ({N: sp.N.totaux[k] || null, N1: sp.N1 ? sp.N1.totaux[k] || null : null});
-    const grp = nom => ({N: sp.N.groupes[nk(nom)] || null, N1: sp.N1 ? sp.N1.groupes[nk(nom)] || null : null});
-    const refs = [{nom:"Réseau " + s.statut, v:tot(s.statut), n:Object.values(sp.N.sites).filter(x => x.statut === s.statut).length}];
-    if(s.tribu && sp.N.groupes[nk(s.tribu)]) refs.push({nom:libTribu(s.tribu), v:grp(s.tribu)});
-    if(s.groupement && sp.N.groupes[nk(s.groupement)] && nk(s.groupement) !== nk(s.tribu)) refs.push({nom:"Groupement " + s.groupement, v:grp(s.groupement)});
-    ctx.pmca = {s:s, v:comp(code), statut:s.statut, sp:sp, refs:refs,
-      pairs:Object.values(sp.N.sites).filter(x => x.statut === s.statut).map(x => comp(x.code))};
+  if(sp){
+    const m = (sa, c) => sa && sa.sites[c] ? sa.sites[c].m : null;
+    const pris = cs => cs.filter(c => sp.N.sites[c]);
+    const comp = cs => ({N:agregatPmca(cs.map(c => m(sp.N, c))), N1:sp.N1 ? agregatPmca(cs.map(c => m(sp.N1, c))) : null});
+    const fN = Object.values(sp.N.sites).filter(s => s.statut === "F").map(s => s.code);
+    const fN1 = sp.N1 ? Object.values(sp.N1.sites).filter(s => s.statut === "F").map(s => s.code) : [];
+    const R = {N:agregatPmca(fN.map(c => m(sp.N, c))), N1:sp.N1 ? agregatPmca(fN1.map(c => m(sp.N1, c))) : null};
+    const c = partie(pris(codes), comp, [{nom:"Réseau F", v:R, n:fN.length}], pris,
+      pris(codes).map(cd => ({code:cd, site:sp.N.sites[cd].site, v:comp([cd])})));
+    if(c){ c.sp = sp; ctx.pmca = c; }
   }
-  if(b.clients && b.clients.sites[code]){
-    const s = b.clients.sites[code];
-    const pairs = Object.values(b.clients.sites).filter(x => x.statut === s.statut);
-    const tribu = Object.values(b.clients.sites).filter(x => x.tribu === s.tribu);
-    ctx.clients = {s:s, v:s.v, statut:s.statut, pairs:pairs.map(x => x.v), pairsSites:pairs,
-      refs:[{nom:"Réseau " + s.statut, v:agregatClients(pairs), n:pairs.length}, {nom:libTribu(s.tribu), v:agregatClients(tribu), n:tribu.length}]};
+  if(b.clients){
+    const pris = cs => cs.map(c => b.clients.sites[c]).filter(Boolean);
+    const sitesF = Object.values(b.clients.sites).filter(s => s.statut === "F");
+    const c = partie(pris(codes), agregatClients, [{nom:"Réseau F", v:agregatClients(sitesF), n:sitesF.length}], pris,
+      pris(codes).map(s => ({code:s.code, site:s.site, v:s.v})));
+    if(c){ c.reseauSites = sitesF; ctx.clients = c; }
   }
   return ctx;
 }
 
-/* ===== calcul d'une ligne : magasin, références, rang ===== */
-function evalLigne(d, v, refs, pairs){
+/* ===== calcul d'une ligne : groupement, référence réseau, rang parmi les groupements ===== */
+function evalLigne(d, v, refs, pairs, nSoi){
   const g = (fn, x) => (fn && x) ? fini(fn(x)) : null;
   const o = {d:d, n1:g(d.n1, v), prev:g(d.prev, v), real:g(d.real, v)};
   const evol = x => d.n1 ? variation(d.fmt, g(d.real, x), g(d.n1, x)) : null;
+  const parMag = (val, n) => (d.moyenne && val !== null) ? (n ? val / n : null) : val;
   o.dN = d.n1 ? variation(d.fmt, o.real, o.n1) : null;
   o.dP = d.prev ? variation(d.fmt, o.real, o.prev) : null;
   if(d.type === "rang") o.dN = (o.n1 !== null && o.real !== null) ? o.n1 - o.real : null;
+  const soi = parMag(o.real, nSoi);
   o.refs = (refs || []).map(r => {
-    let val = g(d.real, r.v);
-    if(d.moyenne && val !== null) val = r.n ? val / r.n : null;
-    const ev = d.type === "rang" ? null : evol(r.v);
+    const val = parMag(g(d.real, r.v), r.n), ev = d.type === "rang" ? null : evol(r.v);
     let ecart = null;
     if(!d.pasEcart && d.type !== "rang"){
       if(d.n1 && !d.niveau){ if(o.dN !== null && ev !== null) ecart = o.dN - ev; }
-      else if(o.real !== null && val !== null) ecart = estTaux(d.fmt) ? o.real - val : variation(d.fmt, o.real, val);
+      else if(soi !== null && val !== null) ecart = estTaux(d.fmt) ? soi - val : variation(d.fmt, soi, val);
     }
     return {nom:r.nom, val:val, ev:ev, ecart:ecart};
   });
-  if(d.rang !== false && d.type !== "rang" && pairs && pairs.length){
-    const mesure = x => (d.n1 && !d.niveau) ? evol(x) : g(d.real, x);
-    const m0 = (d.n1 && !d.niveau) ? o.dN : o.real;
+  if(d.rang !== false && d.type !== "rang" && pairs && pairs.length > 1){
+    const mesure = x => (d.n1 && !d.niveau) ? evol(x.v) : parMag(g(d.real, x.v), x.n);
+    const m0 = (d.n1 && !d.niveau) ? o.dN : soi;
     if(m0 !== null){
       const vals = pairs.map(mesure).filter(x => x !== null);
       const sens = d.sens || 1;
@@ -1119,7 +1367,7 @@ function evalLigne(d, v, refs, pairs){
   }
   return o;
 }
-function lignes(desc, c){ return c ? desc.map(d => evalLigne(d, c.v, c.refs, c.pairs)) : []; }
+function lignes(desc, c){ return c ? desc.map(d => evalLigne(d, c.v, c.refs, c.pairs, c.n)) : []; }
 function trouver(liste, k){ return liste.find(o => o.d.k === k) || null; }
 
 /* ===== rendu ===== */
@@ -1134,7 +1382,7 @@ function classeEvol(d, e){ return classe(e, seuilsEvol(d.fmt)[0], d.sens); }
 function valeurRef(o, r){
   const d = o.d;
   if(d.type === "rang") return "—";
-  return (d.n1 && !d.niveau) ? fmtVar(d.fmt, r.ev) : fmt(r.val, d.fmt);
+  return (d.n1 && !d.niveau) ? fmtVar(d.fmt, r.ev) : fmt(r.val, d.fmt) + (d.moyenne ? " /mag" : "");
 }
 function texteEcart(o, e){
   if(e === null) return "—";
@@ -1147,24 +1395,23 @@ function classeEcart(o, e){
 function tableComparee(liste, opts){
   if(!liste.length) return "";
   const o0 = liste[0];
-  const avecPrev = liste.some(o => o.d.prev);
-  const avecN1 = liste.some(o => o.d.n1);
+  const avecPrev = liste.some(o => o.d.prev), avecN1 = liste.some(o => o.d.n1);
   let h = "<div class='enrobe'><table class='tb'><thead><tr><th>Indicateur</th>";
   if(avecN1) h += "<th>N-1</th>";
   if(avecPrev) h += "<th>Prév</th>";
-  h += "<th>" + (opts && opts.libReal || "Réalisé") + "</th>";
+  h += "<th>" + ((opts && opts.libReal) || "Groupement") + "</th>";
   if(avecPrev) h += "<th>Δ Prév</th>";
   if(avecN1) h += "<th>Δ N-1</th>";
   o0.refs.forEach((r, i) => {
-    h += "<th title='Évolution sur N-1, ou valeur quand l’indicateur n’a pas de N-1'>" + esc(r.nom) + "</th>";
-    if(i === 0) h += "<th title='Écart du magasin à cette référence (moyenne par magasin pour les volumes)'>Écart</th>";
+    h += "<th title='Évolution sur N-1, ou valeur quand l’indicateur n’a pas de N-1 (moyenne par magasin pour les volumes)'>" + esc(r.nom) + "</th>";
+    if(i === 0) h += "<th title='Écart du groupement au réseau'>Écart</th>";
   });
-  h += "<th title='Classement parmi les magasins du même réseau'>Rang</th></tr></thead><tbody>";
+  h += "<th title='Classement parmi les groupements'>Rang</th></tr></thead><tbody>";
   liste.forEach(o => {
     const d = o.d;
     h += "<tr><td>" + esc(d.nom) + "</td>";
-    if(avecN1) h += cellule(d.n1 ? fmt(o.n1, d.fmt) : "", "");
-    if(avecPrev) h += cellule(d.prev ? fmt(o.prev, d.fmt) : "", "");
+    if(avecN1) h += cellule(d.n1 ? fmt(o.n1, d.fmt) : "");
+    if(avecPrev) h += cellule(d.prev ? fmt(o.prev, d.fmt) : "");
     h += cellule("<b>" + fmt(o.real, d.fmt) + "</b>");
     if(avecPrev) h += cellule(d.prev ? fmtVar(d.fmt, o.dP) : "", "d " + classeEvol(d, o.dP));
     if(avecN1) h += cellule(d.n1 ? fmtEvolCell(o) : "", "d " + (d.type === "rang" ? classe(o.dN, 1, 1) : classeEvol(d, o.dN)));
@@ -1177,10 +1424,11 @@ function tableComparee(liste, opts){
   });
   return h + "</tbody></table></div>";
 }
-function tableSimple(entetes, lignesT){
+function tableSimple(entetes, lignesT, classesLignes){
   let h = "<div class='enrobe'><table class='tb'><thead><tr>" + entetes.map(e => "<th>" + esc(e) + "</th>").join("") + "</tr></thead><tbody>";
-  lignesT.forEach(r => {
-    h += "<tr>" + r.map(c => (c && typeof c === "object") ? cellule(c.t, c.cl) : cellule(c)).join("") + "</tr>";
+  lignesT.forEach((r, i) => {
+    h += "<tr" + (classesLignes && classesLignes[i] ? " class='" + classesLignes[i] + "'" : "") + ">" +
+      r.map(c => (c && typeof c === "object") ? cellule(c.t, c.cl) : cellule(c === undefined ? "" : c)).join("") + "</tr>";
   });
   return h + "</tbody></table></div>";
 }
@@ -1191,64 +1439,150 @@ function barre(e, echelle){
   return "<span class='barreD' aria-hidden='true'><i class='" + cl + "' style='" + (e >= 0 ? "left:50%" : "right:50%") + ";width:" + w.toFixed(1) + "%'></i></span>";
 }
 function vide(t){ return "<p class='vide'>" + esc(t) + "</p>"; }
-function absent(nomTableau, c){
-  if(!E.magasin) return vide("Choisissez le magasin dans l'en-tête.");
-  if(!c) return vide("Magasin « " + E.magasin + " » absent du tableau " + nomTableau + ".");
-  return "";
+function absent(nomTableau, ctx){
+  if(!ctx.g) return vide("Choisissez le groupement dans l'en-tête.");
+  return vide("Aucun magasin du groupement " + ctx.g.nom + " dans le tableau " + nomTableau + ".");
+}
+function couverture(c, ctx){
+  const manquants = ctx.codes.filter(cd => !c.details.some(x => x.code === cd));
+  return c.n + " magasin" + (c.n > 1 ? "s" : "") + " sur " + ctx.codes.length +
+    (manquants.length ? " (absent" + (manquants.length > 1 ? "s" : "") + " : " + manquants.map(ctx.nomSite).join(", ") + ")" : "");
+}
+/* détail magasin par magasin, puis total groupement et réseau */
+function tableDetail(c, colonnes, tri){
+  const lignesD = c.details.slice();
+  if(tri) lignesD.sort((a, b) => (tri(b.v) || 0) - (tri(a.v) || 0));
+  const ent = ["Magasin"].concat(colonnes.map(x => x[0]));
+  const rows = lignesD.map(x => [esc(x.site)].concat(colonnes.map(col => col[1](x.v))));
+  const classes = lignesD.map(() => "");
+  if(c.details.length > 1){ rows.push(["<b>Groupement</b>"].concat(colonnes.map(col => col[1](c.v, true)))); classes.push("total"); }
+  rows.push([c.refs[0].nom + " <span class='second'>moyenne par magasin</span>"].concat(colonnes.map(col => col[1](c.refs[0].v, true, c.refs[0].n)))); classes.push("sec");
+  return tableSimple(ent, rows, classes);
+}
+const cVal = (x, f) => fmt(x, f);
+const cMoy = (x, f, n) => fmt(n ? div(x, n) : x, f);
+const cEvol = (x, f, sens) => ({t:fmtVar(f, x), cl:"d " + classe(x, seuilsEvol(f)[0], sens)});
+
+/* --- partie OSS --- */
+function rendreOss(ctx){
+  const z = document.getElementById("corps_oss");
+  if(!E.base.oss){ z.innerHTML = vide("Importez l'Evol OSS Facturé."); return; }
+  const c = ctx.oss;
+  if(!c){ z.innerHTML = absent("OSS", ctx); return; }
+  const an = E.base.oss.annees;
+  let h = "<p class='sous'>Groupement " + esc(ctx.g.nom) + " : " + esc(couverture(c, ctx)) + ". Cumul de l'année fiscale " + esc(an[an.length-1]) +
+    (an.length > 1 ? " contre " + esc(an[an.length-2]) : "") + (E.base.oss.date ? ", données au " + dateFr(E.base.oss.date) : "") +
+    ". Rang parmi les " + c.pairs.length + " groupements.</p>";
+  h += tableComparee(lignes(OSS_LIGNES, c));
+  // trimestres
+  const R = c.refs[0].v;
+  h += "<h3 class='sousTitre'>CA facturé par trimestre</h3>" + tableSimple(
+    ["Trimestre","N-1","Prév","Réalisé","Δ Prév","Δ N-1","Réseau F Δ N-1","Écart","Portefeuille N-1","Portefeuille N"],
+    ["T1","T2","T3","T4"].map(q => {
+      const x = c.v.q[q] || {}, r = R.q[q] || {};
+      const dN = variation("eur", x.real, Z(x.n1)), dP = variation("eur", x.real, Z(x.prev)), dR = variation("eur", r.real, Z(r.n1));
+      const ec = dN !== null && dR !== null ? dN - dR : null;
+      return [q, fmt(x.n1,"eur"), fmt(x.prev,"eur"), "<b>" + fmt(x.real,"eur") + "</b>", cEvol(dP,"eur"), cEvol(dN,"eur"),
+        {t:fmtPct(dR), cl:"sec"}, {t:fmtPts(ec), cl:"d " + classe(ec, S_VIGIL)}, fmt(x.portN1,"eur"), fmt(x.portN,"eur")];
+    }), ["","","",E.trimestre === "T4" ? "total" : ""]);
+  // quinzaines
+  const labs = E.base.oss.quinzaines;
+  if(labs.length){
+    const vals = labs.map(l => ({l:l, e:fini(c.v.hsEur[l]), p:fini(c.v.hsPct[l])}));
+    const max = Math.max(1, ...vals.map(x => Math.abs(x.e || 0)));
+    const W = 760, H = 150, pas = W / vals.length, mid = H/2;
+    let svg = "<svg viewBox='0 0 " + W + " " + (H + 34) + "' role='img' aria-label='Écart OSS hors salons N contre N-1 par quinzaine' style='width:100%;min-width:620px;height:auto;display:block'>";
+    svg += "<line x1='0' x2='" + W + "' y1='" + mid + "' y2='" + mid + "' stroke='#9AA8B5' stroke-width='1'/>";
+    vals.forEach((x, i) => {
+      if(x.e === null) return;
+      const hBar = Math.abs(x.e) / max * (mid - 6), y = x.e >= 0 ? mid - hBar : mid;
+      svg += "<rect x='" + (i*pas + pas*0.18).toFixed(1) + "' y='" + y.toFixed(1) + "' width='" + (pas*0.64).toFixed(1) + "' height='" + Math.max(hBar, 1).toFixed(1) +
+        "' fill='" + (x.e >= 0 ? "#1C9C73" : "#C0392B") + "' rx='2'><title>" + esc(x.l + " : " + fmt(x.e,"eur") + " (" + fmtPct(x.p) + ")") + "</title></rect>";
+      if(i % 2 === 0) svg += "<text x='" + (i*pas + pas/2).toFixed(1) + "' y='" + (H + 14) + "' font-size='10' text-anchor='middle' fill='#6B7A88'>" + esc(x.l.split("-")[0]) + "</text>";
+    });
+    svg += "</svg>";
+    h += "<h3 class='sousTitre'>OSS hors salons, écart N contre N-1 par quinzaine</h3><div class='enrobe'>" + svg + "</div>";
+  }
+  const col = [
+    ["Facturé N", (v, t, n) => cMoy(oy(v,"N","facture"),"eur",n)],
+    ["Δ N-1", v => cEvol(variation("eur", oy(v,"N","facture"), Z(oy(v,"N1","facture"))),"eur")],
+    ["Δ Prév", v => cEvol(variation("eur", oy(v,"N","facture"), Z(oy(v,"N","prev"))),"eur")],
+    ["T4 réalisé", (v, t, n) => cMoy(v.q.T4 ? v.q.T4.real : null,"eur",n)],
+    ["T4 Δ N-1", v => cEvol(v.q.T4 ? variation("eur", v.q.T4.real, Z(v.q.T4.n1)) : null,"eur")],
+    ["OSS / Prév CA", v => cVal(oy(v,"N","ossSurPrev"),"pct")],
+    ["Signé / OSS", v => cVal(oy(v,"N","signeSurOss"),"pct")],
+    ["PM signé", v => cVal(oy(v,"N","pmSigne"),"eur2")],
+    ["Δ trafic OS", v => cEvol(variation("eur", oy(v,"N","nbFacOs"), Z(oy(v,"N1","nbFacOs"))),"eur")]
+  ];
+  h += "<h3 class='sousTitre'>Détail par magasin</h3>" + tableDetail(c, col, v => oy(v,"N","facture"));
+  z.innerHTML = h;
 }
 
-/* --- partie 1 --- */
+/* --- partie Perf --- */
 function rendrePerf(ctx){
   const z = document.getElementById("corps_perf");
   if(!E.base.perf){ z.innerHTML = vide("Importez le tableau Performance CA version Pabad."); return; }
   const c = ctx.perf;
-  if(!c){ z.innerHTML = absent("Performance", c); return; }
-  const titre = (E.base.perf.trimestre ? E.base.perf.trimestre + " cumulé " + E.base.perf.exercice : "Cumul exercice");
-  z.innerHTML = "<p class='sous'>" + esc(c.s.site) + ", " + libStatut(c.statut) + ", " + esc(libTribu(c.s.tribu)) + ". " + esc(titre) +
-      ". Rang calculé parmi les " + c.pairs.length + " " + libStatut(c.statut, true) + ". Pour les volumes (effectif, portefeuilles, CA EGT…), les références sont des moyennes par magasin.</p>" +
+  if(!c){ z.innerHTML = absent("Performance", ctx); return; }
+  const titre = E.base.perf.trimestre ? E.base.perf.trimestre + " cumulé " + E.base.perf.exercice : "Cumul exercice";
+  const col = [
+    ["CA ACC", (v, t, n) => cMoy(v.caRea,"eur",n)], ["Δ N-1", v => cEvol(variation("eur", v.caRea, Z(v.caN1)),"eur")],
+    ["Δ Prév", v => cEvol(variation("eur", v.caRea, Z(v.caPrev)),"eur")], ["% Marge", v => cVal(v.txMg,"pct")],
+    ["Δ N-1", v => cEvol(Z(v.caN1) === null ? null : variation("pct", v.txMg, v.txMgN1),"pct")],
+    ["CA presta", (v, t, n) => cMoy(v.prRea,"eur",n)], ["Δ N-1", v => cEvol(variation("eur", v.prRea, Z(v.prN1)),"eur")],
+    ["% Synergie", v => cVal(v.syn,"pct")], ["% FPPEC", v => cVal(v.txFppec,"pct")],
+    ["CA EGT", (v, tot, n) => cVal(n ? div(v.caEgt, n) : v.caEgt,"eur")]
+  ];
+  z.innerHTML = "<p class='sous'>Groupement " + esc(ctx.g.nom) + " : " + esc(couverture(c, ctx)) + ". " + esc(titre) +
+      ". Pour les volumes, le réseau est ramené à la moyenne par magasin.</p>" +
     "<h3 class='sousTitre'>Accessoires</h3>" + tableComparee(lignes(PERF_ACC, c)) +
-    "<h3 class='sousTitre'>Prestation</h3>" + tableComparee(lignes(PERF_PRESTA, c));
+    "<h3 class='sousTitre'>Prestation</h3>" + tableComparee(lignes(PERF_PRESTA, c)) +
+    "<h3 class='sousTitre'>Détail par magasin</h3>" + tableDetail(c, col, v => v.caRea);
 }
 
-/* --- partie 2 --- */
-function partPmca(x, p, typ, per){
-  return div(pm(x, p, typ, per, "nbCli"), pm(x, p, "TOUS", "T", "nbCli"));
-}
+/* --- partie PMCA --- */
+function partPmca(x, p, typ, per){ return div(pm(x, p, typ, per, "nbCli"), pm(x, p, "TOUS", "T", "nbCli")); }
 function partCaPmca(x, p, typ){ return div(pm(x, p, typ, "T", "ca"), pm(x, p, "TOUS", "T", "ca")); }
 function rendrePmca(ctx){
   const z = document.getElementById("corps_pmca");
   if(!E.base.pmca){ z.innerHTML = vide("Importez le tableau PMCA 12 mois glissants."); return; }
   const c = ctx.pmca;
-  if(!c){ z.innerHTML = absent("PMCA", c); return; }
+  if(!c){ z.innerHTML = absent("PMCA", ctx); return; }
   const R = c.refs[0].v, v = c.v, sp = c.sp;
-  let h = "<p class='sous'>" + esc(c.s.site) + ", groupement " + esc(c.s.groupement || "—") + ", département " + esc(c.s.dept || "—") +
-    ". Saison " + esc(sp.libN) + (sp.libN1 ? " contre " + esc(sp.libN1) : "") + ", 12 mois glissants.</p>";
-  h += "<h3 class='sousTitre'>Tous clients</h3>" + tableComparee(lignes(PMCA_LIGNES, c), {libReal:"N"});
-
+  let h = "<p class='sous'>Groupement " + esc(ctx.g.nom) + " : " + esc(couverture(c, ctx)) + ". Saison " + esc(sp.libN) +
+    (sp.libN1 ? " contre " + esc(sp.libN1) : "") + ", 12 mois glissants. Les clients sont additionnés magasin par magasin.</p>";
+  h += "<h3 class='sousTitre'>Tous clients</h3>" + tableComparee(lignes(PMCA_LIGNES.filter(d => d.type !== "rang"), c), {libReal:"N"});
   const typeLignes = PMCA_TYPES.filter(t => t !== "TOUS").map(t => {
     const pN = partPmca(v,"N",t,"T"), pN1 = partPmca(v,"N1",t,"T"), dp = pN !== null && pN1 !== null ? pN - pN1 : null;
     const pmN = pm(v,"N",t,"T","pmca"), pmN1 = pm(v,"N1",t,"T","pmca");
     return [PMCA_LIB[t], fmt(pm(v,"N",t,"T","nbCli"),"ent"), fmt(pN,"pct"), fmt(pN1,"pct"),
       {t:fmtPts(dp), cl:"d " + classe(dp, S_VIGIL_PT, t === "NQ" ? -1 : 1)}, {t:fmt(partPmca(R,"N",t,"T"),"pct"), cl:"sec"},
-      fmt(pmN,"eur2"), {t:fmtPct(variation("eur", pmN, pmN1)), cl:"d " + classe(variation("eur", pmN, pmN1), S_VIGIL)},
-      fmt(pm(v,"N",t,"T","freq"),"dec2"), fmt(partCaPmca(v,"N",t),"pct")];
+      fmt(pmN,"eur2"), cEvol(variation("eur", pmN, pmN1),"eur"), fmt(pm(v,"N",t,"T","freq"),"dec2"), fmt(partCaPmca(v,"N",t),"pct")];
   });
   h += "<h3 class='sousTitre'>Mix clientèle</h3>" + tableSimple(
-    ["Type de client","Nb clients","Part N","Part N-1","Δ part","Part réseau " + c.statut,"PMCA","Δ PMCA N-1","Fréquence","Part du CA"], typeLignes);
-
+    ["Type de client","Nb clients","Part N","Part N-1","Δ part","Part réseau F","PMCA","Δ PMCA N-1","Fréquence","Part du CA"], typeLignes);
   const deptLignes = [["D","Département d'origine"],["HD","Hors département"]].map(([per, lib]) => {
     const pN = partPmca(v,"N","TOUS",per), pN1 = partPmca(v,"N1","TOUS",per), dp = pN !== null && pN1 !== null ? pN - pN1 : null;
     const pmN = pm(v,"N","TOUS",per,"pmca"), pmN1 = pm(v,"N1","TOUS",per,"pmca");
     return [lib, fmt(pm(v,"N","TOUS",per,"nbCli"),"ent"), fmt(pN,"pct"), fmt(pN1,"pct"), {t:fmtPts(dp), cl:"d neu"},
-      {t:fmt(partPmca(R,"N","TOUS",per),"pct"), cl:"sec"}, fmt(pmN,"eur2"),
-      {t:fmtPct(variation("eur", pmN, pmN1)), cl:"d " + classe(variation("eur", pmN, pmN1), S_VIGIL)}];
+      {t:fmt(partPmca(R,"N","TOUS",per),"pct"), cl:"sec"}, fmt(pmN,"eur2"), cEvol(variation("eur", pmN, pmN1),"eur")];
   });
   h += "<h3 class='sousTitre'>Origine géographique de la clientèle</h3>" + tableSimple(
-    ["Périmètre","Nb clients","Part N","Part N-1","Δ part","Part réseau " + c.statut,"PMCA","Δ PMCA N-1"], deptLignes);
+    ["Périmètre","Nb clients","Part N","Part N-1","Δ part","Part réseau F","PMCA","Δ PMCA N-1"], deptLignes);
+  const g = (x, p, k) => pm(x, p, "TOUS", "T", k);
+  const col = [
+    ["Nb clients", (x, tot, n) => cVal(n ? div(g(x,"N","nbCli"), n) : g(x,"N","nbCli"),"ent")],
+    ["Δ N-1", x => cEvol(variation("eur", g(x,"N","nbCli"), g(x,"N1","nbCli")),"eur")],
+    ["Fréquence", x => cVal(g(x,"N","freq"),"dec2")], ["PMF", x => cVal(g(x,"N","pmf"),"eur2")],
+    ["PMCA", x => cVal(g(x,"N","pmca"),"eur2")], ["Δ PMCA", x => cEvol(variation("eur", g(x,"N","pmca"), g(x,"N1","pmca")),"eur")],
+    ["Part CFD", x => cVal(partPmca(x,"N","CFD","T"),"pct")],
+    ["Rang I+F", (x, tot) => tot ? "" : cVal(g(x,"N","rang"),"rang")]
+  ];
+  h += "<h3 class='sousTitre'>Détail par magasin</h3>" + tableDetail(c, col, x => g(x,"N","ca"));
   z.innerHTML = h;
 }
 
-/* --- partie 3 --- */
+/* --- partie Synthèse client --- */
 function tendanceCA(c){
   const cles = ["caN3","caN2","caN1","caN"];
   return cles.map((k, i) => {
@@ -1257,25 +1591,31 @@ function tendanceCA(c){
     const p = cles[i-1];
     const ev = variation("eur", Z(val), Z(c.v[p]));
     let s1 = 0, s0 = 0;
-    c.pairs.forEach(x => { if(x[k] > 0 && x[p] > 0){ s1 += x[k]; s0 += x[p]; } });
-    const evR = s0 ? s1/s0 - 1 : null;
-    return {k:k, ex:exerciceDecale(3-i), val:val, ev:ev, evR:evR};
+    (c.reseauSites || []).forEach(x => { if(x.v[k] > 0 && x.v[p] > 0){ s1 += x.v[k]; s0 += x.v[p]; } });
+    return {k:k, ex:exerciceDecale(3-i), val:val, ev:ev, evR:s0 ? s1/s0 - 1 : null};
   });
 }
 function rendreClients(ctx){
   const z = document.getElementById("corps_clients");
   if(!E.base.clients){ z.innerHTML = vide("Importez la Synthèse client."); return; }
   const c = ctx.clients;
-  if(!c){ z.innerHTML = absent("Synthèse client", c); return; }
-  let h = "<p class='sous'>" + esc(c.s.site) + ", " + esc(libTribu(c.s.tribu)) + ". Exercice complet" +
-    (E.base.clients.date ? " au " + dateFr(E.base.clients.date) : "") + ", références recalculées sur les " + c.pairs.length + " " + libStatut(c.statut, true) + ".</p>";
-  h += "<h3 class='sousTitre'>Exercice</h3>" + tableComparee(lignes(CLIENTS_LIGNES, c), {libReal:"Magasin"});
+  if(!c){ z.innerHTML = absent("Synthèse client", ctx); return; }
+  let h = "<p class='sous'>Groupement " + esc(ctx.g.nom) + " : " + esc(couverture(c, ctx)) + ". Exercice complet" +
+    (E.base.clients.date ? " au " + dateFr(E.base.clients.date) : "") + ", réseau F recalculé sur " + c.refs[0].n + " franchisés.</p>";
+  h += "<h3 class='sousTitre'>Exercice</h3>" + tableComparee(lignes(CLIENTS_LIGNES, c));
   const t = tendanceCA(c);
   h += "<h3 class='sousTitre'>Tendance du CA sur quatre exercices</h3>" + tableSimple(
-    ["Exercice","CA magasin","Δ","Réseau " + c.statut + " à périmètre comparable","Écart",""],
-    t.map(x => [x.ex, fmt(x.val,"eur"), {t:fmtPct(x.ev), cl:"d " + classe(x.ev, S_VIGIL)}, {t:fmtPct(x.evR), cl:"sec"},
+    ["Exercice","CA groupement","Δ","Réseau F à périmètre comparable","Écart",""],
+    t.map(x => [x.ex, fmt(x.val,"eur"), cEvol(x.ev,"eur"), {t:fmtPct(x.evR), cl:"sec"},
       {t:x.ev !== null && x.evR !== null ? fmtPts(x.ev - x.evR) : "—", cl:"d " + classe(x.ev !== null && x.evR !== null ? x.ev - x.evR : null, S_VIGIL)},
       {t:barre(x.ev), cl:"colBarre"}]));
+  const col = [
+    ["CA exercice", (v, t, n) => cMoy(v.caN,"eur",n)], ["Δ N-1", v => cEvol(variation("eur", v.caN, Z(v.caN1)),"eur")],
+    ["Δ depuis N-3", v => cEvol(variation("eur", v.caN, Z(v.caN3)),"eur")],
+    ["Nb clients", (v, tot, n) => cVal(n ? div(v.nbCli, n) : v.nbCli,"ent")], ["Part nouveaux", v => cVal(v.ratioNouv,"pct")],
+    ["PMC", v => cVal(v.pmc,"eur2")], ["Signé / Total fact", v => cVal(v.txSigne,"pct")], ["Portefeuille / CA", v => cVal(v.portSurCa,"pct")]
+  ];
+  h += "<h3 class='sousTitre'>Détail par magasin</h3>" + tableDetail(c, col, v => v.caN);
   if(E.base.clients.colonneSuspecte)
     h += "<p class='etat sousimp' style='margin-top:10px'>La colonne « % Client qui ne sont pas revenu » reprend exactement le ratio de nouveaux clients sur toutes les lignes du fichier : elle n'est pas exploitée, à vérifier à la source.</p>";
   z.innerHTML = h;
@@ -1286,13 +1626,14 @@ function constat(niveau, axe, partie, titre, detail, indicateur){
   return {niveau:niveau, axe:axe, partie:partie, titre:titre, detail:detail, indicateur:indicateur};
 }
 function niveauDe(x, sv, sa){
-  if(x === null) return "neutre";
+  if(x === null || x === undefined) return "neutre";
   return x <= -sa ? "alerte" : x <= -sv ? "vigilance" : x >= sv ? "favorable" : "neutre";
 }
-function texteRang(o, statut){ return o.rang ? o.rang + "e sur " + o.nb + " " + libStatut(statut, true) : ""; }
+function enumere(l, max){ max = max || 5; return l.slice(0, max).join(", ") + (l.length > max ? " et " + (l.length - max) + " autre" + (l.length - max > 1 ? "s" : "") : ""); }
+function texteRang(o){ return o.rang ? o.rang + "e sur " + o.nb + " groupements" : ""; }
 
 /* évolution sur N-1 (et Prév), comparée à la tendance du réseau */
-function lectureEvolution(o, axe, partie, statut){
+function lectureEvolution(o, axe, partie){
   if(!o || o.real === null || (o.dN === null && o.dP === null)) return null;
   const d = o.d, f = d.fmt, [sv, sa] = seuilsEvol(f), sens = d.sens || 1;
   const ref = o.dN !== null ? o.dN : o.dP, sur = o.dN !== null ? "N-1" : "le prévisionnel";
@@ -1304,39 +1645,103 @@ function lectureEvolution(o, axe, partie, statut){
     if(o.dN !== null && o.dP !== null && sens*o.dP <= -sv){ titre += ", mais sous le prévisionnel"; niveau = "vigilance"; }
     else if(r0 && r0.ecart !== null && sens*r0.ecart <= -sv){ titre += ", mais sous la tendance du réseau"; niveau = "vigilance"; }
   }
+  else if(r0 && r0.ecart !== null && sens*r0.ecart >= sv){ titre += ", mieux que le réseau"; if(niveau === "alerte") niveau = "vigilance"; }
   const det = [fmt(o.real, f) + " réalisé"];
   if(o.dN !== null && o.dP !== null) det.push(fmtVar(f, o.dP) + " sur le prévisionnel");
   if(r0 && r0.ev !== null){
     det.push(minuscule(r0.nom) + " " + fmtVar(f, r0.ev));
     if(r0.ecart !== null) det.push(Math.abs(r0.ecart) < sv ? "dans sa tendance" : "écart de " + fmtPts(r0.ecart));
   }
-  if(o.rang) det.push(texteRang(o, statut) + " sur l'évolution");
+  if(o.rang) det.push(texteRang(o) + " sur l'évolution");
   return constat(niveau, axe, partie, titre, det.join(", ") + ".", d.nom);
 }
 
 /* niveau d'un indicateur comparé au réseau */
-function lectureNiveau(o, axe, partie, statut, mots){
+function lectureNiveau(o, axe, partie, mots){
   if(!o || o.real === null || !o.refs[0] || o.refs[0].ecart === null) return null;
   const d = o.d, r0 = o.refs[0], [sv, sa] = seuilsEcart(d.fmt), sens = d.sens || 1;
-  const x = sens * r0.ecart;
   const titre = Math.abs(r0.ecart) < sv ? d.nom + " dans la moyenne du réseau"
-    : d.nom + (r0.ecart > 0 ? (mots && mots.haut || " au-dessus du réseau") : (mots && mots.bas || " en dessous du réseau"));
-  const det = fmt(o.real, d.fmt) + " contre " + fmt(r0.val, d.fmt) + " pour le " + minuscule(r0.nom) +
-    " (" + texteEcart(o, r0.ecart) + ")" + (o.rang ? ", " + texteRang(o, statut) : "") + ".";
-  return constat(mots && mots.neutre ? "neutre" : niveauDe(x, sv, sa), axe, partie, titre, det, d.nom);
+    : d.nom + (r0.ecart > 0 ? ((mots && mots.haut) || " au-dessus du réseau") : ((mots && mots.bas) || " en dessous du réseau"));
+  const det = fmt(o.real, d.fmt) + (d.moyenne ? " au total" : "") + " contre " + fmt(r0.val, d.fmt) + (d.moyenne ? " par magasin" : "") +
+    " pour le " + minuscule(r0.nom) + " (" + texteEcart(o, r0.ecart) + ")" + (o.rang ? ", " + texteRang(o) : "") + ".";
+  return constat(mots && mots.neutre ? "neutre" : niveauDe(sens * r0.ecart, sv, sa), axe, partie, titre, det, d.nom);
+}
+
+/* écarts entre magasins d'un même groupement */
+function lectureDispersion(c, ctx, mesure, nom, axe, partie){
+  if(!c || c.details.length < 2) return null;
+  const l = c.details.map(x => ({site:nomCourt(x.site) || x.site, e:mesure(x.v)})).filter(x => x.e !== null).sort((a, b) => a.e - b.e);
+  if(l.length < 2) return null;
+  const bas = l.filter(x => x.e <= -0.10), haut = l.filter(x => x.e >= 0.05);
+  const niveau = bas.length ? (bas.length * 2 >= l.length ? "alerte" : "vigilance") : "neutre";
+  const titre = bas.length ? bas.length + " magasin" + (bas.length > 1 ? "s" : "") + " sur " + l.length + " en retrait de plus de 10 % sur " + nom
+    : "Écart de " + virgule((l[l.length-1].e - l[0].e)*100, 1) + " pt entre magasins sur " + nom;
+  const det = "De " + fmtPct(l[0].e) + " (" + l[0].site + ") à " + fmtPct(l[l.length-1].e) + " (" + l[l.length-1].site + ")." +
+    (bas.length ? " En retrait : " + enumere(bas.map(x => x.site + " " + fmtPct(x.e))) + "." : "") +
+    (haut.length ? " En progression : " + enumere(haut.slice().reverse().map(x => x.site + " " + fmtPct(x.e))) + "." : "");
+  return constat(niveau, axe, partie, titre, det, nom);
+}
+
+function lectureOss(ctx){
+  const c = ctx.oss;
+  if(!c) return [];
+  const L = lignes(OSS_LIGNES, c), v = c.v, R = c.refs[0].v, out = [];
+  const push = x => { if(x) out.push(x); };
+
+  // le T4 isolé : le vrai bilan du trimestre
+  const q = n => v.q[n] || {}, qr = n => R.q[n] || {};
+  const t = E.trimestre || "T4", x = q(t), dN = variation("eur", x.real, Z(x.n1)), dP = variation("eur", x.real, Z(x.prev));
+  if(dN !== null){
+    const dR = variation("eur", qr(t).real, Z(qr(t).n1)), ec = dR !== null ? dN - dR : null;
+    let niveau = niveauDe(dN, S_VIGIL, S_ALERTE), titre = t + " : CA facturé " + (Math.abs(dN) < S_VIGIL ? "stable" : dN > 0 ? "en progression de " + fmtVarAbs("eur", dN) : "en retrait de " + fmtVarAbs("eur", dN)) + " sur N-1";
+    if(niveau !== "alerte" && niveau !== "vigilance" && dP !== null && dP <= -S_VIGIL){ niveau = "vigilance"; titre += ", sous le prévisionnel"; }
+    const serie = ["T1","T2","T3","T4"].map(n => ({n:n, e:variation("eur", q(n).real, Z(q(n).n1))})).filter(y => y.e !== null);
+    push(constat(niveau, "Perf ACC", "oss", titre,
+      fmt(x.real,"eur") + " facturés" + (dP !== null ? ", " + fmtPct(dP) + " sur le prévisionnel" : "") +
+      (dR !== null ? ", réseau F " + fmtPct(dR) + " (écart " + fmtPts(ec) + ")" : "") + ". Trimestres : " +
+      serie.map(y => y.n + " " + fmtPct(y.e)).join(", ") + ".", "CA facturé " + t));
+  }
+  push(lectureEvolution(trouver(L,"facture"), "Perf ACC", "oss"));
+  push(lectureEvolution(trouver(L,"ossSurPrev"), "Perf ACC", "oss"));
+  push(lectureEvolution(trouver(L,"signeSurOss"), "Perf ACC", "oss"));
+
+  const dT = trouver(L,"nbFacOs").dN, dPm = trouver(L,"pmOs").dN;
+  if(dT !== null && dPm !== null){
+    const e = (a) => a <= -S_VIGIL ? -1 : a >= S_VIGIL ? 1 : 0, cle = e(dT) + "," + e(dPm);
+    const m = {"-1,1":["One-Shot : moins de passages, panier en hausse","vigilance"], "-1,-1":["One-Shot : trafic et panier en recul","alerte"],
+      "1,-1":["One-Shot : plus de passages, panier en baisse","vigilance"], "1,1":["One-Shot : trafic et panier en progression","favorable"],
+      "-1,0":["One-Shot : trafic en recul","vigilance"], "0,-1":["One-Shot : panier en recul","vigilance"],
+      "1,0":["One-Shot : trafic en progression","favorable"], "0,1":["One-Shot : panier en progression","favorable"]}[cle];
+    if(m) out.push(constat(m[1], "Perf ACC", "oss", m[0], "Nombre de factures One-Shot " + fmtPct(dT) + ", PM OS " + fmtPct(dPm) + " sur N-1.", "Trafic OS"));
+  }
+  const dS = trouver(L,"nbSigne").dN, dPs = trouver(L,"pmSigne").dN;
+  if(dS !== null && dPs !== null && (Math.abs(dS) >= S_VIGIL || Math.abs(dPs) >= S_VIGIL))
+    out.push(constat(niveauDe((1+dS)*(1+dPs) - 1, S_VIGIL, S_ALERTE), "Perf ACC", "oss",
+      "Signé : " + (Math.abs(dS) >= Math.abs(dPs) ? "nombre de commandes " + (dS > 0 ? "en hausse" : "en baisse") : "panier signé " + (dPs > 0 ? "en hausse" : "en baisse")),
+      "Nb CDC signé " + fmtPct(dS) + ", PM signé " + fmtPct(dPs) + " sur N-1.", "Signé"));
+  push(lectureEvolution(trouver(L,"portN"), "Perf ACC", "oss"));
+
+  const labs = E.base.oss.quinzaines.slice(-6);
+  if(labs.length === 6){
+    const eur = labs.reduce((a, l) => a + (fini(v.hsEur[l]) || 0), 0);
+    const nbPos = labs.filter(l => fini(v.hsEur[l]) > 0).length;
+    out.push(constat(nbPos >= 4 && eur > 0 ? "favorable" : nbPos <= 2 && eur < 0 ? "vigilance" : "neutre", "Perf ACC", "oss",
+      "OSS hors salons sur les 12 dernières semaines : " + (eur >= 0 ? "+" : "") + fmt(eur, "eur") + " sur N-1",
+      nbPos + " quinzaine" + (nbPos > 1 ? "s" : "") + " sur 6 au-dessus de N-1 (" + labs[0] + " à " + labs[5] + ").", "OSS hors salons"));
+  }
+  push(lectureDispersion(c, ctx, x => variation("eur", oy(x,"N","facture"), Z(oy(x,"N1","facture"))), "le facturé", "Perf ACC", "oss"));
+  return out;
 }
 
 function lecturePerf(ctx){
   const c = ctx.perf;
   if(!c) return [];
-  const A = lignes(PERF_ACC, c), P = lignes(PERF_PRESTA, c), v = c.v, R = c.refs[0].v, st = c.statut;
+  const A = lignes(PERF_ACC, c), P = lignes(PERF_PRESTA, c), v = c.v, R = c.refs[0].v;
   const out = [];
   const push = x => { if(x) out.push(x); };
-
-  push(lectureEvolution(trouver(A,"caAcc"), "Perf ACC", "perf", st));
-  push(lectureEvolution(trouver(A,"txMg"), "Perf ACC", "perf", st));
-  push(lectureEvolution(trouver(A,"txR"), "Perf ACC", "perf", st));
-
+  push(lectureEvolution(trouver(A,"caAcc"), "Perf ACC", "perf"));
+  push(lectureEvolution(trouver(A,"txMg"), "Perf ACC", "perf"));
+  push(lectureEvolution(trouver(A,"txR"), "Perf ACC", "perf"));
   const dF = trouver(A,"fac").dN, dPm = trouver(A,"pmf").dN;
   if(dF !== null && dPm !== null){
     const fB = dF <= -S_VIGIL, fH = dF >= S_VIGIL, pB = dPm <= -S_VIGIL, pH = dPm >= S_VIGIL;
@@ -1346,17 +1751,20 @@ function lecturePerf(ctx){
       : fH ? ["Flux en progression, PMF stable","favorable"] : pH ? ["PMF en progression, flux stable","favorable"] : null;
     if(m) out.push(constat(m[1], "Perf ACC", "perf", m[0], "Nombre de factures " + fmtPct(dF) + ", PMF " + fmtPct(dPm) + " sur N-1.", "Nb factures"));
   }
-  push(lectureNiveau(trouver(A,"caHomme"), "Perf ACC", "perf", st));
-  push(lectureNiveau(trouver(A,"cdv"), "Perf ACC", "perf", st));
-  if(fini(v.caRea) && !fini(v.caEgt))
-    out.push(constat("vigilance", "Perf ACC", "perf", "Aucun CA EGT sur l'exercice",
-      "Le " + minuscule(c.refs[0].nom) + " cumule " + fmt(R.caEgt, "eur") + " de CA EGT, facturé par " +
-      c.pairs.filter(x => fini(x.caEgt) > 0).length + " " + libStatut(st, true) + " sur " + c.pairs.length + ".", "CA EGT"));
-
-  push(lectureEvolution(trouver(P,"presta"), "Presta", "perf", st));
-  const syn = lectureNiveau(trouver(P,"syn"), "Presta", "perf", st);
+  push(lectureNiveau(trouver(A,"caHomme"), "Perf ACC", "perf"));
+  push(lectureNiveau(trouver(A,"cdv"), "Perf ACC", "perf"));
+  const sansEgt = c.details.filter(x => !fini(x.v.caEgt));
+  if(sansEgt.length){
+    const avec = (c.reseauSites || []).filter(x => fini(x.v.caEgt) > 0).length;
+    out.push(constat("vigilance", "Perf ACC", "perf",
+      sansEgt.length === c.details.length ? "Aucun CA EGT sur l'exercice" : sansEgt.length + " magasin" + (sansEgt.length > 1 ? "s" : "") + " sans CA EGT sur l'exercice",
+      (sansEgt.length < c.details.length ? "Sans EGT : " + enumere(sansEgt.map(x => nomCourt(x.site)), 6) + ". " : "") +
+      "Le réseau F cumule " + fmt(R.caEgt, "eur") + " de CA EGT, facturé par " + avec + " franchisés sur " + (c.reseauSites || []).length + ".", "CA EGT"));
+  }
+  push(lectureEvolution(trouver(P,"presta"), "Presta", "perf"));
+  const syn = lectureNiveau(trouver(P,"syn"), "Presta", "perf");
   if(syn){ if(fini(v.gainSyn) > 0) syn.detail += " Gain synergie calculé dans le tableau : " + fmt(v.gainSyn, "eur") + "."; out.push(syn); }
-  const fp = lectureNiveau(trouver(P,"fppec"), "Presta", "perf", st);
+  const fp = lectureNiveau(trouver(P,"fppec"), "Presta", "perf");
   if(fp){ if(fini(v.gainFppec) > 0) fp.detail += " Gain FPPEC calculé : " + fmt(v.gainFppec, "eur") + "."; out.push(fp); }
   if(fini(v.txFa) !== null){
     const e = v.txFa - TX_FA_CIBLE;
@@ -1366,86 +1774,82 @@ function lecturePerf(ctx){
   }
   if(fini(v.gainTotal) > 0 && fini(v.prRea)){
     const poids = v.gainTotal / v.prRea;
-    out.push(constat(poids >= 0.10 ? "vigilance" : "neutre", "Presta", "perf",
-      "Potentiel presta non capté : " + fmt(v.gainTotal, "eur"),
+    out.push(constat(poids >= 0.10 ? "vigilance" : "neutre", "Presta", "perf", "Potentiel presta non capté : " + fmt(v.gainTotal, "eur"),
       "Soit " + fmt(poids, "pct") + " du CA presta réalisé (synergie " + fmt(v.gainSyn, "eur") + ", FPPEC " + fmt(v.gainFppec, "eur") + ", FA " + fmt(v.gainFa, "eur") + ").", "Total gain presta"));
   }
+  push(lectureDispersion(c, ctx, x => variation("eur", x.caRea, Z(x.caN1)), "le CA accessoires", "Perf ACC", "perf"));
   return out;
 }
 
 function lecturePmca(ctx){
   const c = ctx.pmca;
   if(!c) return [];
-  const L = lignes(PMCA_LIGNES, c), v = c.v, R = c.refs[0].v, st = c.statut, out = [];
-  const pmca = lectureEvolution(trouver(L,"pmca"), "PMCA", "pmca", st);
-  if(pmca){
-    const rg = trouver(L,"rang");
-    if(rg && rg.real !== null) pmca.detail += " Rang I+F : " + (rg.n1 !== null ? fmt(rg.n1,"rang") + " en N-1, " : "") + fmt(rg.real,"rang") + " cette saison.";
-    out.push(pmca);
-  }
+  const L = lignes(PMCA_LIGNES, c), v = c.v, R = c.refs[0].v, out = [];
+  const pmca = lectureEvolution(trouver(L,"pmca"), "PMCA", "pmca");
+  if(pmca) out.push(pmca);
   const dec = decomposition(ctx);
   if(dec){
     const cli = trouver(L,"nbCli"), r0 = cli && cli.refs[0];
-    if(r0 && r0.ev !== null) dec.constat.detail += " Nombre de clients du " + minuscule(r0.nom) + " : " + fmtPct(r0.ev) + (cli.rang ? ", " + texteRang(cli, st) + " sur l'évolution" : "") + ".";
+    if(r0 && r0.ev !== null) dec.constat.detail += " Nombre de clients du réseau F : " + fmtPct(r0.ev) + (cli.rang ? ", " + texteRang(cli) + " sur l'évolution" : "") + ".";
     out.push(dec.constat);
   }
-
   const pC = partPmca(v,"N","CFD","T"), pC1 = partPmca(v,"N1","CFD","T"), pCR = partPmca(R,"N","CFD","T");
   if(pC !== null){
     const d1 = pC1 !== null ? pC - pC1 : null, dr = pCR !== null ? pC - pCR : null;
     const pmC = pm(v,"N","CFD","T","pmca"), pmT = pm(v,"N","TOUS","T","pmca");
-    const niveau = (d1 !== null && d1 <= -0.02) || (dr !== null && dr <= -0.05) ? "vigilance"
-      : (d1 !== null && d1 >= 0.02) ? "favorable" : "neutre";
+    const niveau = (d1 !== null && d1 <= -0.02) || (dr !== null && dr <= -0.05) ? "vigilance" : (d1 !== null && d1 >= 0.02) ? "favorable" : "neutre";
     out.push(constat(niveau, "Clients", "pmca",
       "Clients CFD : " + fmt(pC,"pct") + " des clients" + (d1 !== null && Math.abs(d1) >= S_VIGIL_PT ? (d1 > 0 ? ", en hausse" : ", en baisse") : ""),
-      (d1 !== null ? fmtPts(d1) + " sur N-1, " : "") + (pCR !== null ? "réseau " + st + " à " + fmt(pCR,"pct") + ". " : "") +
+      (d1 !== null ? fmtPts(d1) + " sur N-1, " : "") + (pCR !== null ? "réseau F à " + fmt(pCR,"pct") + ". " : "") +
       (pmC !== null && pmT ? "PMCA des clients CFD " + fmt(pmC,"eur2") + " contre " + fmt(pmT,"eur2") + " tous clients confondus." : ""), "Part clients CFD"));
   }
   const pNQ = partPmca(v,"N","NQ","T"), pNQR = partPmca(R,"N","NQ","T");
   if(pNQ !== null && pNQR !== null && pNQ - pNQR >= 0.03)
     out.push(constat("vigilance", "Clients", "pmca", "Part de clients NON QUAL supérieure au réseau",
-      fmt(pNQ,"pct") + " des clients contre " + fmt(pNQR,"pct") + " pour le réseau " + st + ".", "Part clients NON QUAL"));
+      fmt(pNQ,"pct") + " des clients contre " + fmt(pNQR,"pct") + " pour le réseau F.", "Part clients NON QUAL"));
   const pHD = partPmca(v,"N","TOUS","HD"), pHD1 = partPmca(v,"N1","TOUS","HD");
   if(pHD !== null && pHD1 !== null && Math.abs(pHD - pHD1) >= 0.02)
     out.push(constat("neutre", "Clients", "pmca", "Clientèle hors département " + (pHD > pHD1 ? "en hausse" : "en baisse"),
       fmt(pHD,"pct") + " des clients contre " + fmt(pHD1,"pct") + " en N-1, PMCA hors département " + fmt(pm(v,"N","TOUS","HD","pmca"),"eur2") + ".", "Part hors département"));
+  const x = lectureDispersion(c, ctx, y => variation("eur", pm(y,"N","TOUS","T","pmca"), pm(y,"N1","TOUS","T","pmca")), "le PMCA", "PMCA", "pmca");
+  if(x) out.push(x);
   return out;
 }
 
 function lectureClients(ctx){
   const c = ctx.clients;
   if(!c) return [];
-  const L = lignes(CLIENTS_LIGNES, c), st = c.statut, out = [];
+  const L = lignes(CLIENTS_LIGNES, c), out = [];
   const push = x => { if(x) out.push(x); };
   const t = tendanceCA(c).filter(x => x.val);
   if(t.length >= 3){
     const premier = t[0], dernier = t[t.length-1];
     const ev = variation("eur", dernier.val, premier.val);
     let sR1 = 0, sR0 = 0;
-    c.pairs.forEach(x => { const a = x[dernier.k], b = x[premier.k]; if(a > 0 && b > 0){ sR1 += a; sR0 += b; } });
-    const evR = sR0 ? sR1/sR0 - 1 : null;
-    const ecart = evR !== null && ev !== null ? ev - evR : null;
+    (c.reseauSites || []).forEach(x => { const a = x.v[dernier.k], b = x.v[premier.k]; if(a > 0 && b > 0){ sR1 += a; sR0 += b; } });
+    const evR = sR0 ? sR1/sR0 - 1 : null, ecart = evR !== null && ev !== null ? ev - evR : null;
     const niveau = ecart !== null && ecart <= -0.05 ? (ev <= -0.10 ? "alerte" : "vigilance")
       : ecart !== null && ecart >= 0.05 ? "favorable" : ev <= -0.10 ? "vigilance" : ev >= 0.05 ? "favorable" : "neutre";
     push(constat(niveau, "Clients", "clients",
       "CA " + (ev >= 0 ? "en hausse" : "en baisse") + " de " + fmtVarAbs("eur", ev) + " depuis " + premier.ex +
         (ecart !== null && Math.abs(ecart) >= 0.05 ? (ecart > 0 ? ", mieux que le réseau" : ", moins bien que le réseau") : ""),
-      t.map(x => x.ex + " " + fmt(x.val,"eur")).join(", ") + (evR !== null ? ". Réseau " + st + " à périmètre comparable : " + fmtPct(evR) + "." : "."), "CA Fact exercice"));
+      t.map(x => x.ex + " " + fmt(x.val,"eur")).join(", ") + (evR !== null ? ". Réseau F à périmètre comparable : " + fmtPct(evR) + "." : "."), "CA Fact exercice"));
   }
-  push(lectureNiveau(trouver(L,"ratioNouv"), "Clients", "clients", st, {haut:" plus élevée que le réseau", bas:" plus faible que le réseau"}));
-  push(lectureNiveau(trouver(L,"pmc"), "Clients", "clients", st));
+  push(lectureNiveau(trouver(L,"ratioNouv"), "Clients", "clients", {haut:" plus élevée que le réseau", bas:" plus faible que le réseau"}));
+  push(lectureNiveau(trouver(L,"pmc"), "Clients", "clients"));
   const pn = trouver(L,"pmcNouv"), pc = trouver(L,"pmcConnus");
   if(pn && pc && pn.real !== null && pc.real !== null){
     const e = variation("eur", pn.real, pc.real);
     push(constat("neutre", "Clients", "clients",
       "Les nouveaux clients dépensent " + (Math.abs(e) < S_VIGIL ? "autant que" : e > 0 ? "plus que" : "moins que") + " les clients déjà connus",
-      "PMC " + fmt(pn.real,"eur2") + " pour les nouveaux clients, " + fmt(pc.real,"eur2") + " pour les autres (" + fmtPct(e) + ")." , "PMC nouveaux clients"));
+      "PMC " + fmt(pn.real,"eur2") + " pour les nouveaux clients, " + fmt(pc.real,"eur2") + " pour les autres (" + fmtPct(e) + ").", "PMC nouveaux clients"));
   }
-  push(lectureNiveau(trouver(L,"txSigne"), "Clients", "clients", st));
-  push(lectureNiveau(trouver(L,"portSurCa"), "Clients", "clients", st, {neutre:true}));
+  push(lectureNiveau(trouver(L,"txSigne"), "Clients", "clients"));
+  push(lectureNiveau(trouver(L,"portSurCa"), "Clients", "clients", {neutre:true}));
   return out;
 }
-const LECTURES = {perf:lecturePerf, pmca:lecturePmca, clients:lectureClients};
+const LECTURES = {oss:lectureOss, perf:lecturePerf, pmca:lecturePmca, clients:lectureClients};
+const PARTIES_ORDRE = ["oss","perf","pmca","clients"];
 
 /* décomposition du CA 12 mois : clients x fréquence x PMF */
 function decomposition(ctx){
@@ -1457,31 +1861,34 @@ function decomposition(ctx){
   const ePmf = variation("eur", g("N","pmf"), g("N1","pmf"));
   const eCa = variation("eur", g("N","ca"), g("N1","ca"));
   if(eCli === null || eFreq === null || ePmf === null) return null;
-  const effets = [["le nombre de clients", eCli], ["la fréquence d'achat", eFreq], ["le PMF", ePmf]];
-  const moteur = effets.slice().sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))[0];
+  const effets = [["le nombre de clients","du nombre de clients", eCli], ["la fréquence d'achat","de la fréquence d'achat", eFreq], ["le PMF","du PMF", ePmf]];
+  const moteur = effets.slice().sort((a, b) => Math.abs(b[2]) - Math.abs(a[2]))[0];
   const ca = eCa !== null ? eCa : (1+eCli)*(1+eFreq)*(1+ePmf) - 1;
   const titre = "CA 12 mois " + (Math.abs(ca) < S_VIGIL ? "stable" : ca > 0 ? "en progression de " + fmtVarAbs("eur", ca) : "en retrait de " + fmtVarAbs("eur", ca)) +
-    ", " + (Math.abs(moteur[1]) < S_VIGIL ? "sans moteur marqué"
-      : (ca >= 0 && moteur[1] >= 0) ? "porté par " + moteur[0]
-      : (ca < 0 && moteur[1] < 0) ? "sous l'effet du recul " + {"le nombre de clients":"du nombre de clients", "la fréquence d'achat":"de la fréquence d'achat", "le PMF":"du PMF"}[moteur[0]]
-      : "malgré " + moteur[0]);
+    ", " + (Math.abs(moteur[2]) < S_VIGIL ? "sans moteur marqué" : (ca >= 0 && moteur[2] >= 0) ? "porté par " + moteur[0]
+      : (ca < 0 && moteur[2] < 0) ? "sous l'effet du recul " + moteur[1] : "malgré " + moteur[0]);
   return {eCli:eCli, eFreq:eFreq, ePmf:ePmf, eCa:ca,
     constat:constat(niveauDe(ca, S_VIGIL, S_ALERTE), "PMCA", "pmca", titre,
       "Nombre de clients " + fmtPct(eCli) + ", fréquence d'achat " + fmtPct(eFreq) + ", PMF " + fmtPct(ePmf) + " sur N-1.", "CA 12 mois glissants")};
 }
 
 function lectureCroisee(ctx){
-  const out = [];
-  const p = ctx.perf, cl = ctx.clients, pc = ctx.pmca;
-  if(p && cl && fini(p.v.caRea) && fini(cl.v.caN)){
+  const out = [], p = ctx.perf, cl = ctx.clients, pc = ctx.pmca, o = ctx.oss;
+  if(p && o && p.n === o.n){
+    const perfTotal = (fini(p.v.caRea) || 0) + (fini(p.v.prRea) || 0), fac = oy(o.v,"N","facture");
+    const e = variation("eur", fac, perfTotal);
+    if(e !== null && Math.abs(e) > 0.01)
+      out.push(constat("vigilance", "Autre", "croisee", "Facturé OSS différent du CA ACC + presta de Performance",
+        fmt(fac,"eur") + " dans l'Evol OSS, " + fmt(perfTotal,"eur") + " dans Performance (" + fmtPct(e) + "). Vérifier les dates d'arrêté.", "Facturé"));
+  }
+  if(p && cl && p.n === cl.n && fini(p.v.caRea) && fini(cl.v.caN)){
     const e = variation("eur", cl.v.caN, p.v.caRea);
     if(Math.abs(e) > 0.01)
       out.push(constat("vigilance", "Autre", "croisee", "CA différent entre Performance et Synthèse client",
         fmt(p.v.caRea,"eur") + " dans Performance, " + fmt(cl.v.caN,"eur") + " dans la Synthèse client (" + fmtPct(e) + "). Vérifier la date d'arrêté des deux fichiers.", "CA accessoires"));
   }
-  if(cl && pc){
-    const a = fini(cl.v.nbCli), b = pm(pc.v, "N", "TOUS", "T", "nbCli");
-    const e = variation("eur", b, a);
+  if(cl && pc && cl.n === pc.n){
+    const a = fini(cl.v.nbCli), b = pm(pc.v, "N", "TOUS", "T", "nbCli"), e = variation("eur", b, a);
     if(e !== null && Math.abs(e) > 0.05)
       out.push(constat("neutre", "Autre", "croisee", "Nombre de clients différent entre PMCA et Synthèse client",
         fmt(b,"ent") + " clients sur 12 mois glissants, " + fmt(a,"ent") + " sur l'exercice (" + fmtPct(e) + ") : les périmètres de comptage diffèrent.", "Nb clients"));
@@ -1494,33 +1901,34 @@ function carte(x, tag){
   return "<div class='constat " + x.niveau + "'><h3>" + esc(x.titre) +
     (tag ? "<span class='tag'>" + esc(tag) + "</span>" : "") + "</h3><p>" + esc(x.detail) + "</p></div>";
 }
-const TAGS = {perf:"Perf", pmca:"PMCA", clients:"Clients", croisee:"Croisée"};
+const TAGS = {oss:"OSS", perf:"Perf", pmca:"PMCA", clients:"Clients", croisee:"Croisée"};
 function tousConstats(ctx){
   ctx = ctx || contexte();
-  return lecturePerf(ctx).concat(lecturePmca(ctx), lectureClients(ctx), lectureCroisee(ctx));
+  return lectureOss(ctx).concat(lecturePerf(ctx), lecturePmca(ctx), lectureClients(ctx), lectureCroisee(ctx));
 }
 
 function toutCalculer(){
   const ctx = contexte();
-  rendrePerf(ctx); rendrePmca(ctx); rendreClients(ctx);
-  ["perf","pmca","clients"].forEach(p => {
+  rendreOss(ctx); rendrePerf(ctx); rendrePmca(ctx); rendreClients(ctx);
+  PARTIES_ORDRE.forEach(p => {
     const l = LECTURES[p](ctx);
-    document.getElementById("lecture_" + p).innerHTML = l.length ? l.map(x => carte(x)).join("") : vide("La lecture apparaît une fois le tableau importé et le magasin choisi.");
+    document.getElementById("lecture_" + p).innerHTML = l.length ? l.map(x => carte(x)).join("") : vide("La lecture apparaît une fois le tableau importé et le groupement choisi.");
   });
-
   const z = document.getElementById("croisee");
   const dec = decomposition(ctx), cr = lectureCroisee(ctx);
   let h = "";
-  if(dec || ctx.perf){
+  if(dec || ctx.perf || ctx.oss){
     const bloc = (lib, val) => "<div><div class='lib'>" + lib + "</div><div class='val d " + classe(val, S_VIGIL) + "'>" + fmtPct(val) + "</div></div>";
-    h += "<div class='croise' style='grid-template-columns:repeat(auto-fit,minmax(150px,1fr))'>" +
+    const t4 = ctx.oss && ctx.oss.v.q[E.trimestre] ? variation("eur", ctx.oss.v.q[E.trimestre].real, Z(ctx.oss.v.q[E.trimestre].n1)) : null;
+    h += "<div class='croise' style='grid-template-columns:repeat(auto-fit,minmax(140px,1fr))'>" +
+      (ctx.oss ? bloc("Facturé " + E.trimestre + " (OSS)", t4) + bloc("Facturé exercice (OSS)", variation("eur", oy(ctx.oss.v,"N","facture"), Z(oy(ctx.oss.v,"N1","facture")))) : "") +
       (ctx.perf ? bloc("CA ACC exercice (Perf)", variation("eur", ctx.perf.v.caRea, Z(ctx.perf.v.caN1))) : "") +
       (dec ? bloc("CA 12 mois (PMCA)", dec.eCa) + bloc("Nombre de clients", dec.eCli) + bloc("Fréquence d'achat", dec.eFreq) + bloc("PMF", dec.ePmf) : "") +
       "</div>";
     if(dec) h += carte(dec.constat);
   }
   h += cr.map(x => carte(x)).join("");
-  z.innerHTML = h || vide("Il faut au moins le tableau PMCA ou le tableau Performance pour le magasin choisi.");
+  z.innerHTML = h || vide("Choisissez un groupement présent dans les tableaux importés.");
 
   const tous = tousConstats(ctx);
   const forts = tous.filter(x => x.niveau === "favorable");
@@ -1531,35 +1939,29 @@ function toutCalculer(){
   document.getElementById("compteBilan").textContent = tous.length
     ? forts.length + " point" + (forts.length > 1 ? "s" : "") + " fort" + (forts.length > 1 ? "s" : "") + ", " +
       vigil.length + " point" + (vigil.length > 1 ? "s" : "") + " de vigilance" + (al ? " dont " + al + " en alerte" : "") : "";
-
-  rendreObjectifs(ctx);
-  rendrePotentiel(ctx);
-  rendreLibelles();
-  rendreSources(ctx);
-  majJauge(ctx);
+  rendreObjectifs(ctx); rendrePotentiel(ctx); rendreLibelles(ctx); rendreSources(ctx); majJauge(ctx);
 }
 
-function rendreLibelles(){
+function rendreLibelles(ctx){
   document.querySelectorAll(".libT").forEach(e => e.textContent = libT());
   document.querySelectorAll(".libTs").forEach(e => e.textContent = libTs());
   const ms = moisDuTrimestre(E.trimestre).map(m => MOIS_NOMS[m-1]);
   document.getElementById("sousCadre").textContent =
-    "Bilan du " + libT() + " (cumul d'exercice arrêté fin " + ms[2] + ") et feuille de route du " + libTs() + ".";
-  const aides = {perf:"Performance CA version Pabad.", pmca:"PMCA 12 mois glissants, saisons N et N-1.", clients:"Synthèse client de fin d'exercice."};
+    (ctx.g ? "Groupement " + ctx.g.nom + " : " + ctx.codes.map(ctx.nomSite).join(", ") + ". " : "") +
+    "Bilan du " + libT() + " (arrêté fin " + ms[2] + ") et feuille de route du " + libTs() + ".";
+  const aides = {oss:"Evol OSS Facturé INT FRA et STEP2.", perf:"Performance CA version Pabad.", pmca:"PMCA 12 mois glissants, saisons N et N-1.", clients:"Synthèse client de fin d'exercice."};
   Object.keys(aides).forEach(p => { const e = document.getElementById("etat_" + p); if(!e.textContent) e.textContent = aides[p]; });
 }
 function rendreSources(ctx){
-  const z = document.getElementById("sources");
-  const trouve = {perf:!!ctx.perf, pmca:!!ctx.pmca, clients:!!ctx.clients};
   const b = E.base;
-  z.innerHTML = [["perf","Performance"],["pmca","PMCA"],["clients","Synthèse client"]].map(([k, lib]) => {
-    const charge = !!b[k];
-    const suffixe = !charge ? "" : !E.magasin ? "" : trouve[k] ? "" : " : magasin absent";
-    return "<span class='puce " + (charge && (!E.magasin || trouve[k]) ? "ok" : "") + "' title='" + esc(charge ? b[k].fichier : "Non importé") + "'>" + lib + suffixe + "</span>";
+  document.getElementById("sources").innerHTML = [["oss","OSS"],["perf","Performance"],["pmca","PMCA"],["clients","Synthèse client"]].map(([k, lib]) => {
+    const charge = !!b[k], c = ctx[k];
+    const suffixe = !charge || !ctx.g ? "" : c ? " " + c.n + "/" + ctx.codes.length : " : absent";
+    return "<span class='puce " + (charge && (!ctx.g || c) ? "ok" : "") + "' title='" + esc(charge ? b[k].fichier : "Non importé") + "'>" + lib + suffixe + "</span>";
   }).join("");
 }
 function majJauge(ctx){
-  const pts = [!!ctx.perf, !!ctx.pmca, !!ctx.clients,
+  const pts = [!!ctx.oss, !!ctx.perf, !!ctx.pmca, !!ctx.clients,
     OBJECTIFS.some(o => E.objectifs[o.k] && E.objectifs[o.k].obj !== null && E.objectifs[o.k].obj !== undefined),
     E.pa.some(l => l.action), !!E.fdr];
   document.getElementById("jauge").style.width = Math.round(pts.filter(Boolean).length / pts.length * 100) + "%";
@@ -1567,12 +1969,14 @@ function majJauge(ctx){
 
 /* ===== objectifs ===== */
 const OBJECTIFS = [
+  {k:"facture", nom:"Facturé (OSS)", fmt:"eur",  real:c => c.oss ? oy(c.oss.v,"N","facture") : null},
   {k:"caAcc",  nom:"CA accessoires", fmt:"eur",  real:c => c.perf ? fini(c.perf.v.caRea) : null},
   {k:"presta", nom:"CA presta",      fmt:"eur",  real:c => c.perf ? fini(c.perf.v.prRea) : null},
   {k:"txMg",   nom:"% Marge",        fmt:"pct",  real:c => c.perf ? fini(c.perf.v.txMg) : null},
   {k:"syn",    nom:"% Synergie",     fmt:"pct",  real:c => c.perf ? fini(c.perf.v.syn) : null},
   {k:"pmca",   nom:"PMCA",           fmt:"eur2", real:c => c.pmca ? pm(c.pmca.v,"N","TOUS","T","pmca") : null},
-  {k:"nbCli",  nom:"Nb clients",     fmt:"ent",  real:c => c.pmca ? pm(c.pmca.v,"N","TOUS","T","nbCli") : null}
+  {k:"nbCli",  nom:"Nb clients",     fmt:"ent",  real:c => c.pmca ? pm(c.pmca.v,"N","TOUS","T","nbCli") : null},
+  {k:"signeSurOss", nom:"Signé / OSS", fmt:"pct", real:c => c.oss ? oy(c.oss.v,"N","signeSurOss") : null}
 ];
 function fmtSaisie(f, v){
   if(v === null || v === undefined || !isFinite(v)) return "";
@@ -1627,7 +2031,7 @@ function lignesPotentiel(ctx){
 function rendrePotentiel(ctx){
   const z = document.getElementById("potentiel");
   const l = lignesPotentiel(ctx);
-  if(!l.length){ z.innerHTML = vide("Disponible une fois le tableau Performance importé et le magasin choisi."); return; }
+  if(!l.length){ z.innerHTML = vide("Disponible une fois le tableau Performance importé et le groupement choisi."); return; }
   z.innerHTML = tableSimple(["Levier","Gain magasin","Base de calcul","Total " + minuscule(ctx.perf.refs[0].nom)],
     l.map(x => [x.nom, {t:"<b>" + fmt(x.val,"eur") + "</b>"}, {t:esc(x.aide), cl:"sec"}, {t:fmt(x.reseau,"eur"), cl:"sec"}]));
 }
@@ -1699,31 +2103,40 @@ function ligneMail(o){
   const r0 = o.refs[0];
   if(r0){
     if(d.n1 && !d.niveau && r0.ev !== null) b.push(minuscule(r0.nom) + " " + fmtVar(d.fmt, r0.ev));
-    else if((!d.n1 || d.niveau) && r0.val !== null && !d.pasEcart) b.push(minuscule(r0.nom) + " " + fmt(r0.val, d.fmt));
+    else if((!d.n1 || d.niveau) && r0.val !== null && !d.pasEcart){
+      if(d.moyenne){ const n = (contexte()[o.partie] || {}).n; b.push((n ? "soit " + fmt(o.real / n, d.fmt) + " par magasin, " : "") + minuscule(r0.nom) + " " + fmt(r0.val, d.fmt) + " par magasin"); }
+      else b.push(minuscule(r0.nom) + " " + fmt(r0.val, d.fmt));
+    }
   }
   return "- " + d.nom + " : " + fmt(o.real, d.fmt) + (b.length ? " (" + b.join(", ") + ")" : "");
 }
 function composerFDR(){
   const ctx = contexte();
   const L = [];
-  L.push("Objet : bilan " + libT() + " et feuille de route " + libTs() + (E.magasin ? " – " + E.magasin : ""));
+  L.push("Objet : bilan " + libT() + " et feuille de route " + libTs() + (ctx.g ? " – groupement " + ctx.g.nom : ""));
   L.push(""); L.push("Bonjour" + (E.franchise ? " " + E.franchise : "") + ",");
   L.push("");
   L.push("Suite à notre point" + (E.date ? " du " + dateFr(E.date) : "") + (E.participants ? " (" + E.participants + ")" : "") +
     ", voici le bilan du " + libT() + " et la feuille de route du " + libTs() + ".");
+  if(ctx.g) L.push("Magasins concernés : " + ctx.codes.map(ctx.nomSite).join(", ") + ".");
   L.push(""); L.push("BILAN " + libT().toUpperCase());
-  const bloc = (titre, liste) => { const l = liste.map(ligneMail).filter(Boolean); if(l.length){ L.push(""); L.push(titre); l.forEach(x => L.push(x)); } };
+  const bloc = (titre, liste, partie) => { const l = liste.map(o => { if(o) o.partie = partie; return ligneMail(o); }).filter(Boolean); if(l.length){ L.push(""); L.push(titre); l.forEach(x => L.push(x)); } };
+  if(ctx.oss){
+    const O = lignes(OSS_LIGNES, ctx.oss), q = ctx.oss.v.q[E.trimestre];
+    if(q && fini(q.real) !== null){ L.push(""); L.push("Facturé du " + E.trimestre + " : " + fmt(q.real,"eur") + " (" + fmtPct(variation("eur", q.real, Z(q.n1))) + " sur N-1, " + fmtPct(variation("eur", q.real, Z(q.prev))) + " sur le prévisionnel)"); }
+    bloc("OSS et facturé (cumul exercice)", ["facture","ossSurPrev","signeSurOss","pmSigne","portN"].map(k => trouver(O, k)), "oss");
+  }
   if(ctx.perf){
     const A = lignes(PERF_ACC, ctx.perf), P = lignes(PERF_PRESTA, ctx.perf);
-    bloc("Perfs ACC et Presta (cumul exercice)", ["caAcc","txMg","caHomme","presta","syn","txFa"].map(k => trouver(A, k) || trouver(P, k)));
+    bloc("Perfs ACC et Presta (cumul exercice)", ["caAcc","txMg","caHomme","presta","syn","txFa"].map(k => trouver(A, k) || trouver(P, k)), "perf");
   }
   if(ctx.pmca){
     const M = lignes(PMCA_LIGNES, ctx.pmca);
-    bloc("PMCA (12 mois glissants)", ["pmca","nbCli","freq","pmf"].map(k => trouver(M, k)));
+    bloc("PMCA (12 mois glissants)", ["pmca","nbCli","freq","pmf"].map(k => trouver(M, k)), "pmca");
   }
   if(ctx.clients){
     const C = lignes(CLIENTS_LIGNES, ctx.clients);
-    bloc("Synthèse client", ["nbCli","ratioNouv","pmc","txSigne"].map(k => trouver(C, k)));
+    bloc("Synthèse client", ["nbCli","ratioNouv","pmc","txSigne"].map(k => trouver(C, k)), "clients");
   }
   const tous = tousConstats(ctx);
   const forts = tous.filter(x => x.niveau === "favorable");
@@ -1797,7 +2210,7 @@ async function exporterPDF(){
       doc.setDrawColor(30,115,190); doc.setLineWidth(0.6); doc.line(M, y, M + L, y);
       y += 5; doc.setTextColor(30,34,46);
     };
-    const sousTitre = t => { saut(10); doc.setFont("helvetica","bold"); doc.setFontSize(9.5); doc.setTextColor(107,122,136); doc.text(net(t), M, y); y += 2; doc.setTextColor(30,34,46); };
+    const sousTitre = t => { saut(26); doc.setFont("helvetica","bold"); doc.setFontSize(9.5); doc.setTextColor(107,122,136); doc.text(net(t), M, y); y += 2; doc.setTextColor(30,34,46); };
     const para = (t, taille, gras) => {
       doc.setFont("helvetica", gras ? "bold" : "normal"); doc.setFontSize(taille || 9.5);
       doc.splitTextToSize(net(t), L).forEach(l => { saut(6); doc.text(l, M, y); y += 4.3; });
@@ -1859,21 +2272,53 @@ async function exporterPDF(){
     doc.setTextColor(255); doc.setFont("helvetica","bold"); doc.setFontSize(15);
     doc.text(net("Bilan " + libT() + " et feuille de route " + libTs()), M, 10.5);
     doc.setFont("helvetica","normal"); doc.setFontSize(10);
-    doc.text(net([E.magasin || "Magasin non précisé", E.franchise, E.date ? dateFr(E.date) : ""].filter(Boolean).join("  –  ")), M, 17);
+    doc.text(net([ctx.g ? "Groupement " + ctx.g.nom : "Groupement non précisé", E.franchise, E.date ? dateFr(E.date) : ""].filter(Boolean).join("  –  ")), M, 17);
     doc.setTextColor(30,34,46); y = 30;
+    if(ctx.g) para("Magasins : " + ctx.codes.map(ctx.nomSite).join(", "), 9);
     if(E.participants) para("Participants : " + E.participants, 9);
+    const detail = (c, cols, tri) => {
+      if(!c || c.details.length < 2) return;
+      sousTitre("Détail par magasin"); y += 2;
+      const l = c.details.slice().sort((a, b) => (tri(b.v) || 0) - (tri(a.v) || 0));
+      const val = x => (x && typeof x === "object") ? {t:x.t, c:(x.cl || "").replace("d ","")} : x;
+      const rows = l.map(x => [nomCourt(x.site) || x.site].concat(cols.map(k => val(k[1](x.v)))));
+      rows.push(["Groupement"].concat(cols.map(k => val(k[1](c.v, true)))));
+      rows.push([c.refs[0].nom + " (moy./mag.)"].concat(cols.map(k => val(k[1](c.refs[0].v, true, c.refs[0].n)))));
+      table(["Magasin"].concat(cols.map(k => k[0])), rows);
+    };
+    if(ctx.oss){
+      const c = ctx.oss, R = c.refs[0].v;
+      titre("OSS et facturé – année fiscale " + E.base.oss.annees[E.base.oss.annees.length-1]);
+      comparee(lignes(OSS_LIGNES, c));
+      sousTitre("CA facturé par trimestre"); y += 2;
+      table(["Trimestre","N-1","Prév","Réalisé","Écart Prév","Écart N-1","Réseau F N-1","Portefeuille N"],
+        ["T1","T2","T3","T4"].map(q => { const x = c.v.q[q] || {}, r = R.q[q] || {};
+          const dN = variation("eur", x.real, Z(x.n1)), dP = variation("eur", x.real, Z(x.prev));
+          return [q, fmt(x.n1,"eur"), fmt(x.prev,"eur"), fmt(x.real,"eur"), {t:fmtPct(dP), c:classe(dP, S_VIGIL)}, {t:fmtPct(dN), c:classe(dN, S_VIGIL)},
+            fmtPct(variation("eur", r.real, Z(r.n1))), fmt(x.portN,"eur")]; }));
+      detail(c, [["Facturé N", (v, t, n) => cMoy(oy(v,"N","facture"),"eur",n)], ["Écart N-1", v => cEvol(variation("eur", oy(v,"N","facture"), Z(oy(v,"N1","facture"))),"eur")],
+        ["T4 écart N-1", v => cEvol(v.q.T4 ? variation("eur", v.q.T4.real, Z(v.q.T4.n1)) : null,"eur")], ["OSS / Prév CA", v => fmt(oy(v,"N","ossSurPrev"),"pct")],
+        ["Signé / OSS", v => fmt(oy(v,"N","signeSurOss"),"pct")]], v => oy(v,"N","facture"));
+      sousTitre("Lecture"); y += 3; cartes(lectureOss(ctx));
+      doc.addPage(); y = M;
+    }
 
     if(ctx.perf){
       titre("Perfs ACC et Presta – " + (E.base.perf.trimestre ? E.base.perf.trimestre + " cumulé " + E.base.perf.exercice : "cumul exercice"));
       sousTitre("Accessoires"); y += 2; comparee(lignes(PERF_ACC, ctx.perf));
       sousTitre("Prestation"); y += 2; comparee(lignes(PERF_PRESTA, ctx.perf));
+      detail(ctx.perf, [["CA ACC", (v, t, n) => cMoy(v.caRea,"eur",n)], ["Écart N-1", v => cEvol(variation("eur", v.caRea, Z(v.caN1)),"eur")],
+        ["% Marge", v => fmt(v.txMg,"pct")], ["CA presta", (v, t, n) => cMoy(v.prRea,"eur",n)], ["% Synergie", v => fmt(v.syn,"pct")], ["% FPPEC", v => fmt(v.txFppec,"pct")]], v => v.caRea);
       sousTitre("Lecture"); y += 3; cartes(lecturePerf(ctx));
     }
     if(ctx.pmca){
       const c = ctx.pmca, v = c.v, R = c.refs[0].v;
       doc.addPage(); y = M;
       titre("PMCA – 12 mois glissants, saison " + c.sp.libN + (c.sp.libN1 ? " contre " + c.sp.libN1 : ""));
-      comparee(lignes(PMCA_LIGNES, c));
+      comparee(lignes(PMCA_LIGNES.filter(d => d.type !== "rang"), c));
+      detail(c, [["Nb clients", (x, t, n) => fmt(n ? div(pm(x,"N","TOUS","T","nbCli"), n) : pm(x,"N","TOUS","T","nbCli"),"ent")],
+        ["PMCA", x => fmt(pm(x,"N","TOUS","T","pmca"),"eur2")], ["Écart PMCA", x => cEvol(variation("eur", pm(x,"N","TOUS","T","pmca"), pm(x,"N1","TOUS","T","pmca")),"eur")],
+        ["Fréquence", x => fmt(pm(x,"N","TOUS","T","freq"),"dec2")], ["Part CFD", x => fmt(partPmca(x,"N","CFD","T"),"pct")]], x => pm(x,"N","TOUS","T","ca"));
       sousTitre("Mix clientèle"); y += 2;
       table(["Type de client","Nb clients","Part N","Part N-1","Écart part","Part réseau","PMCA","Écart PMCA N-1","Fréquence","Part du CA"],
         PMCA_TYPES.filter(t => t !== "TOUS").map(t => {
@@ -1888,6 +2333,8 @@ async function exporterPDF(){
       doc.addPage(); y = M;
       titre("Synthèse client – exercice" + (E.base.clients.date ? " au " + dateFr(E.base.clients.date) : ""));
       comparee(lignes(CLIENTS_LIGNES, ctx.clients));
+      detail(ctx.clients, [["CA exercice", (v, t, n) => cMoy(v.caN,"eur",n)], ["Écart N-1", v => cEvol(variation("eur", v.caN, Z(v.caN1)),"eur")],
+        ["Part nouveaux", v => fmt(v.ratioNouv,"pct")], ["PMC", v => fmt(v.pmc,"eur2")], ["Signé / Total fact", v => fmt(v.txSigne,"pct")]], v => v.caN);
       sousTitre("Tendance du CA sur quatre exercices"); y += 2;
       table(["Exercice","CA magasin","Écart","Réseau à périmètre comparable","Écart au réseau"],
         tendanceCA(ctx.clients).map(x => [x.ex, fmt(x.val,"eur"), {t:fmtPct(x.ev), c:classe(x.ev, S_VIGIL)}, fmtPct(x.evR),
@@ -1933,7 +2380,7 @@ async function exporterPDF(){
     const total = doc.internal.getNumberOfPages();
     for(let i = 1; i <= total; i++){
       doc.setPage(i); doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(107,122,136);
-      doc.text(net("Bilan " + libT() + "  –  " + (E.magasin || "")), M, H - 6);
+      doc.text(net("Bilan " + libT() + "  –  " + (ctx.g ? "groupement " + ctx.g.nom : "")), M, H - 6);
       doc.text(i + " / " + total, W - M, H - 6, {align:"right"});
     }
     doc.save(nomFichier("pdf"));
@@ -1943,7 +2390,7 @@ async function exporterPDF(){
 
 /* ===== enregistrement ===== */
 function nomFichier(ext){
-  const code = codeMagasin().replace(/[^\w]/g,"") || "magasin";
+  const code = slugGroupement();
   return "BILAN_" + code + "_" + E.trimestre + "_" + (E.exercice || "exercice").replace(/[^\w-]/g,"") + "." + ext;
 }
 let minuteur = null;
@@ -1968,7 +2415,7 @@ function appliquer(d){
   const vierge = etatVide();
   Object.keys(vierge).forEach(k => E[k] = vierge[k]);
   Object.keys(vierge).forEach(k => { if(d && d[k] !== undefined) E[k] = d[k]; });
-  E.base = Object.assign({perf:null, pmca:null, clients:null}, (d && d.base) || {});
+  E.base = Object.assign({oss:null, perf:null, pmca:null, clients:null}, (d && d.base) || {});
   E.schema = SCHEMA;
 }
 async function ouvrir(input){
@@ -1979,26 +2426,26 @@ async function ouvrir(input){
     if(d.type !== "bilan-fdr" || !d.etat) throw new Error("ce fichier n'est pas un bilan enregistré depuis l'appli");
     if(!confirm("Remplacer le bilan en cours par « " + f.name + " » ?")){ input.value = ""; return; }
     appliquer(d.etat);
-    remplirMagasins(); remplirChamps(); toutCalculer(); rendrePA(); sauver();
+    remplirGroupements(); remplirChamps(); toutCalculer(); rendrePA(); sauver();
     const c = document.getElementById("etat_cadre"); c.className = "etat sousimp"; c.textContent = messageSources();
   }catch(err){ alert("Ouverture impossible : " + err.message); }
   input.value = "";
 }
 function remiseAZero(){
-  if(!confirm("Repartir sur un bilan vierge pour un autre magasin ?\n\nLes tableaux importés sont conservés. Magasin, commentaires, objectifs, plan d'action et mail sont effacés.")) return;
+  if(!confirm("Repartir sur un bilan vierge pour un autre groupement ?\n\nLes tableaux importés sont conservés. Groupement, commentaires, objectifs, plan d'action et mail sont effacés.")) return;
   const garde = {base:E.base, trimestre:E.trimestre, exercice:E.exercice};
   appliquer(garde);
   E.date = new Date().toISOString().slice(0,10);
-  remplirChamps(); toutCalculer(); rendrePA(); sauver();
+  remplirGroupements(); remplirChamps(); toutCalculer(); rendrePA(); sauver();
   window.scrollTo({top:0, behavior:"smooth"});
 }
 
 /* ===== démarrage ===== */
-const CHAMPS_LIBRES = [["trimestre","trimestre"],["exercice","exercice"],["magasin","magasin"],["dateBilan","date"],
+const CHAMPS_LIBRES = [["trimestre","trimestre"],["exercice","exercice"],["groupement","groupement"],["dateBilan","date"],
   ["franchise","franchise"],["participants","participants"],["lectureCR","lectureCR"],
   ["retourFranchise","retourFranchise"],["prochainPoint","prochainPoint"],["texteFDR","fdr"]];
 function remplirChamps(){
-  CHAMPS_LIBRES.forEach(([id, k]) => { document.getElementById(id).value = E[k] || ""; });
+  CHAMPS_LIBRES.forEach(([id, k]) => { if(id !== "groupement") document.getElementById(id).value = E[k] || ""; });
   majMots();
 }
 function demarrer(){
@@ -2009,19 +2456,21 @@ function demarrer(){
     const auj = new Date(), dt = dernierTrimestreClos(auj);
     E.trimestre = dt.t; E.exercice = libEx(dt.ex); E.date = auj.toISOString().slice(0,10);
   }
-  remplirMagasins(); remplirChamps();
+  remplirGroupements(); remplirChamps();
   if(repris){ const c = document.getElementById("etat_cadre"); c.textContent = messageSources(); }
 
   CHAMPS_LIBRES.forEach(([id, k]) => {
     const el = document.getElementById(id);
     el.addEventListener("change", () => {
       E[k] = el.value;
-      if(["trimestre","exercice","magasin"].includes(k)) garderFocusApres(() => { toutCalculer(); rendrePA(); });
+      if(k === "groupement"){ E.step2 = false; remplirGroupements(); }
+      if(["trimestre","exercice","groupement"].includes(k)) garderFocusApres(() => { toutCalculer(); rendrePA(); });
       if(k === "fdr") majMots();
       sauver();
     });
     if(el.tagName === "TEXTAREA") el.addEventListener("input", () => { E[k] = el.value; if(k === "fdr") majMots(); sauver(); });
   });
+  document.getElementById("step2").addEventListener("change", e => { E.step2 = e.target.checked; toutCalculer(); sauver(); });
   document.addEventListener("change", e => {
     const el = e.target;
     if(!el.dataset) return;
