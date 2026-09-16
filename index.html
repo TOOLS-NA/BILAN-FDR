@@ -1136,15 +1136,27 @@ function messageSources(){
 /* ===== groupements ===== */
 const GROUPEMENTS_EXCLUS = ["ferme","hors analyse","masse",""];
 /* référentiel des sites : l'index du fichier OSS fait foi, le PMCA sert de repli */
+/* Le PMCA regroupe tous les Libertium sous « Trigano » : on les répartit en Est, Ouest et Sud
+   grâce à la tribu du tableau Performance, qui porte ce découpage. */
+function groupementRepli(code, grp){
+  const b = E.base, t = b.perf && b.perf.sites[code] ? b.perf.sites[code].tribu : "";
+  if(/^libertium\b/i.test(t) && (!grp || /trigano|libertium/i.test(grp))) return t;
+  return grp;
+}
 function referentiel(){
   const r = {}, b = E.base;
   if(b.oss){
     Object.values(b.oss.index || {}).forEach(x => { if(x.groupement) r[x.code] = Object.assign({}, x); });
     Object.values(b.oss.sites).forEach(s => { if(!r[s.code]) r[s.code] = {code:s.code, site:s.site, statut:s.statut, groupement:s.groupement, cr:s.cr, perimetre:s.perimetre}; });
-  } else if(b.pmca){
-    const sp = saisonsPmca();
-    Object.values(sp.N.sites).forEach(s => { r[s.code] = {code:s.code, site:s.site, statut:s.statut, groupement:s.groupement, cr:s.tribu}; });
   }
+  // sans OSS, ou pour un magasin absent de son index : groupement du PMCA, Libertium détaillés par la tribu Performance
+  const sp = saisonsPmca();
+  if(sp) Object.values(sp.N.sites).forEach(s => {
+    if(!r[s.code]) r[s.code] = {code:s.code, site:s.site, statut:s.statut, groupement:groupementRepli(s.code, s.groupement), cr:s.tribu};
+  });
+  if(b.perf && !b.oss) Object.values(b.perf.sites).forEach(s => {
+    if(!r[s.code] && /^libertium\b/i.test(s.tribu)) r[s.code] = {code:s.code, site:s.site, statut:s.statut, groupement:s.tribu, cr:""};
+  });
   const nom = c => (b.perf && b.perf.sites[c] && b.perf.sites[c].site) || (b.clients && b.clients.sites[c] && b.clients.sites[c].site) || "";
   Object.values(r).forEach(x => { if(!x.site || !codeSite(x.site)) x.site = nom(x.code) || x.site || x.code; });
   return r;
