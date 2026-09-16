@@ -128,6 +128,12 @@ h3.sousTitre{margin:16px 0 6px;font-size:13px;font-weight:700;color:var(--gris)}
 .hcase input{width:auto;accent-color:var(--vert)}
 #groupement{flex:1 1 220px;min-width:0}
 header select:disabled{opacity:.6;cursor:not-allowed}
+dialog#dlgRaz{border:0;border-radius:10px;padding:20px 22px;max-width:480px;width:calc(100% - 32px);box-shadow:0 12px 40px rgba(14,44,73,.35);color:var(--encre)}
+dialog#dlgRaz::backdrop{background:rgba(14,44,73,.45)}
+.razChoix{display:grid;gap:10px}
+.razChoix .btn{display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:3px;padding:12px 14px}
+.razChoix .btn span{font-weight:400;font-size:13px;opacity:.92}
+.btn.danger{background:var(--rouge)}
 .barreD{position:relative;display:inline-block;width:90px;height:8px;background:#EEF2F6;border-radius:4px;vertical-align:middle}
 .barreD::after{content:"";position:absolute;left:50%;top:-3px;bottom:-3px;width:1px;background:#9AA8B5}
 .barreD i{position:absolute;top:0;bottom:0;background:var(--gris)}
@@ -187,7 +193,7 @@ header select:disabled{opacity:.6;cursor:not-allowed}
     <label class="hcase" id="libStep2" title="Ajouter au bilan les magasins STEP2 du groupement"><input type="checkbox" id="step2"> STEP2</label>
     <input type="date" id="dateBilan" aria-label="Date du bilan">
     <div class="hactions">
-      <button class="hbtn ghost" onclick="remiseAZero()">RAZ</button>
+      <button class="hbtn ghost" onclick="ouvrirRaz()">RAZ</button>
       <label class="hbtn ghost" title="Reprendre un bilan enregistré">Ouvrir<input type="file" accept=".json" onchange="ouvrir(this)"></label>
       <button class="hbtn ghost" onclick="exportJSON()">Enregistrer</button>
       <button class="hbtn" id="btnPdf" onclick="exporterPDF()">Export PDF</button>
@@ -331,6 +337,20 @@ header select:disabled{opacity:.6;cursor:not-allowed}
 </section>
 
 </main>
+
+<dialog id="dlgRaz" aria-labelledby="dlgRazTitre">
+  <h2 id="dlgRazTitre">Remise à zéro</h2>
+  <p class="sous">Choisissez ce qui doit être effacé.</p>
+  <div class="razChoix">
+    <button class="btn" onclick="remiseAZero('bilan')">
+      <b>Nouveau bilan</b><span>Efface groupement, commentaires, objectifs, plan d'action et mail. Les tableaux importés sont conservés.</span>
+    </button>
+    <button class="btn danger" onclick="remiseAZero('tout')">
+      <b>Tout effacer</b><span>Efface aussi les tableaux importés (OSS, Performance, PMCA, Synthèse client). Il faudra les réimporter.</span>
+    </button>
+  </div>
+  <div class="barre" style="justify-content:flex-end"><button class="btn sec" onclick="document.getElementById('dlgRaz').close()">Annuler</button></div>
+</dialog>
 
 <script>
 "use strict";
@@ -1137,9 +1157,10 @@ function messageSources(){
 const GROUPEMENTS_EXCLUS = ["ferme","hors analyse","masse",""];
 /* référentiel des sites : l'index du fichier OSS fait foi, le PMCA sert de repli */
 /* Le PMCA regroupe tous les Libertium sous « Trigano » : on les répartit en Est, Ouest et Sud
-   grâce à la tribu du tableau Performance, qui porte ce découpage. */
-function groupementRepli(code, grp){
-  const b = E.base, t = b.perf && b.perf.sites[code] ? b.perf.sites[code].tribu : "";
+   grâce à la colonne Tribu du PMCA lui-même (ou, à défaut, du tableau Performance). */
+function groupementRepli(code, grp, tribu){
+  const b = E.base;
+  const t = /^libertium\b/i.test(tribu || "") ? tribu : (b.perf && b.perf.sites[code] ? b.perf.sites[code].tribu : "");
   if(/^libertium\b/i.test(t) && (!grp || /trigano|libertium/i.test(grp))) return t;
   return grp;
 }
@@ -1152,7 +1173,7 @@ function referentiel(){
   // sans OSS, ou pour un magasin absent de son index : groupement du PMCA, Libertium détaillés par la tribu Performance
   const sp = saisonsPmca();
   if(sp) Object.values(sp.N.sites).forEach(s => {
-    if(!r[s.code]) r[s.code] = {code:s.code, site:s.site, statut:s.statut, groupement:groupementRepli(s.code, s.groupement), cr:s.tribu};
+    if(!r[s.code]) r[s.code] = {code:s.code, site:s.site, statut:s.statut, groupement:groupementRepli(s.code, s.groupement, s.tribu), cr:s.tribu};
   });
   if(b.perf && !b.oss) Object.values(b.perf.sites).forEach(s => {
     if(!r[s.code] && /^libertium\b/i.test(s.tribu)) r[s.code] = {code:s.code, site:s.site, statut:s.statut, groupement:s.tribu, cr:""};
@@ -2479,11 +2500,24 @@ async function ouvrir(input){
   }catch(err){ alert("Ouverture impossible : " + err.message); }
   input.value = "";
 }
-function remiseAZero(){
-  if(!confirm("Repartir sur un bilan vierge pour un autre groupement ?\n\nLes tableaux importés sont conservés. Groupement, commentaires, objectifs, plan d'action et mail sont effacés.")) return;
-  const garde = {base:E.base, trimestre:E.trimestre, exercice:E.exercice};
+function ouvrirRaz(){
+  const d = document.getElementById("dlgRaz");
+  if(d && d.showModal) d.showModal();
+  else if(confirm("Tout effacer, y compris les tableaux importés ?\n\nOK : tout effacer. Annuler : nouveau bilan en gardant les tableaux.")) remiseAZero("tout");
+  else remiseAZero("bilan");
+}
+async function remiseAZero(mode){
+  const d = document.getElementById("dlgRaz");
+  if(d && d.open) d.close();
+  const tout = mode === "tout";
+  const garde = tout ? {trimestre:E.trimestre, exercice:E.exercice} : {base:E.base, trimestre:E.trimestre, exercice:E.exercice};
   appliquer(garde);
   E.date = new Date().toISOString().slice(0,10);
+  if(tout){
+    await sauverBase();
+    ["cadre","oss","perf","pmca","clients"].forEach(p => { const e = document.getElementById("etat_" + p); if(e){ e.className = "etat sousimp"; e.textContent = ""; } });
+    document.getElementById("etat_cadre").textContent = "Tableaux effacés. Importez les tableaux réseau, puis choisissez le groupement dans l'en-tête.";
+  }
   remplirGroupements(); remplirChamps(); toutCalculer(); rendrePA(); sauver();
   window.scrollTo({top:0, behavior:"smooth"});
 }
