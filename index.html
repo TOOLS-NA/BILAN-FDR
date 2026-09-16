@@ -127,6 +127,7 @@ h3.sousTitre{margin:16px 0 6px;font-size:13px;font-weight:700;color:var(--gris)}
 .hcase{display:inline-flex;align-items:center;gap:5px;font-size:13px;color:#fff;white-space:nowrap;cursor:pointer}
 .hcase input{width:auto;accent-color:var(--vert)}
 #groupement{flex:1 1 220px;min-width:0}
+header select:disabled{opacity:.6;cursor:not-allowed}
 .barreD{position:relative;display:inline-block;width:90px;height:8px;background:#EEF2F6;border-radius:4px;vertical-align:middle}
 .barreD::after{content:"";position:absolute;left:50%;top:-3px;bottom:-3px;width:1px;background:#9AA8B5}
 .barreD i{position:absolute;top:0;bottom:0;background:var(--gris)}
@@ -182,7 +183,7 @@ h3.sousTitre{margin:16px 0 6px;font-size:13px;font-weight:700;color:var(--gris)}
       <option>T1</option><option>T2</option><option>T3</option><option>T4</option>
     </select>
     <input type="text" id="exercice" aria-label="Exercice" placeholder="2025-2026">
-    <select id="groupement" aria-label="Groupement"><option value="">Importez l'Evol OSS Facturé</option></select>
+    <select id="groupement" aria-label="Groupement" disabled><option value="">Groupement</option></select>
     <label class="hcase" id="libStep2" title="Ajouter au bilan les magasins STEP2 du groupement"><input type="checkbox" id="step2"> STEP2</label>
     <input type="date" id="dateBilan" aria-label="Date du bilan">
     <div class="hactions">
@@ -513,8 +514,10 @@ async function xlFlux(blob, e){
   const brut = blob.slice(debut, debut + e.comp).stream();
   if(e.methode === 0) return brut;
   if(e.methode !== 8) throw new Error("compression non prise en charge");
-  if(typeof DecompressionStream === "undefined") throw new Error("navigateur trop ancien pour lire ce classeur");
-  return brut.pipeThrough(new DecompressionStream("deflate-raw"));
+  let ds;
+  try{ ds = new DecompressionStream("deflate-raw"); }
+  catch(e){ throw new Error("navigateur trop ancien pour lire les fichiers Excel (Chrome ou Edge 103 minimum, Firefox 113, Safari 16.4)"); }
+  return brut.pipeThrough(ds);
 }
 
 async function xlTexte(blob, e){
@@ -1072,6 +1075,7 @@ async function importer(input, zone){
   const fichiers = [...(input.files || [])];
   if(!fichiers.length) return;
   const et = document.getElementById("etat_" + zone);
+  et.scrollIntoView({block:"center", behavior:"smooth"});
   et.className = "etat sousimp"; et.textContent = "Lecture de " + fichiers.map(f => f.name).join(", ") + "…";
   const msg = [];
   let ok = 0;
@@ -1116,6 +1120,8 @@ async function importer(input, zone){
   if(zone !== "cadre"){ const c = document.getElementById("etat_cadre"); c.className = "etat sousimp"; c.textContent = messageSources(); }
   remplirGroupements();
   remplirChamps(); toutCalculer(); rendrePA(); sauver();
+  if(ok) await sauverBase();
+  if(ok < fichiers.length) alert("Import incomplet :\n\n" + msg.join("\n"));
 }
 
 function messageSources(){
@@ -1167,11 +1173,13 @@ function remplirGroupements(){
   const l = listeGroupements();
   const opt = x => "<option value='" + esc(x.nom) + "'>" + esc(x.nom) + " (" + x.F.length + (x.S2.length ? " + " + x.S2.length + " STEP2" : "") + ")</option>";
   const f = l.filter(x => x.F.length), s = l.filter(x => !x.F.length);
-  sel.innerHTML = "<option value=''>" + (l.length ? "Choisir un groupement" : "Importez l'Evol OSS Facturé") + "</option>" +
+  sel.innerHTML = "<option value=''" + (l.length ? "" : " disabled") + ">" + (l.length ? "Choisir un groupement" : "Groupement") + "</option>" +
     (f.length ? "<optgroup label='Franchisés'>" + f.map(opt).join("") + "</optgroup>" : "") +
     (s.length ? "<optgroup label='STEP2 uniquement'>" + s.map(opt).join("") + "</optgroup>" : "");
   const g = groupementChoisi();
   sel.value = g ? g.nom : "";
+  sel.disabled = !l.length;
+  sel.title = l.length ? "Groupement à analyser" : "La liste des groupements se remplit après l'import de l'Evol OSS Facturé";
   const c = document.getElementById("step2");
   c.checked = !!E.step2;
   c.disabled = !g || !g.S2.length || !g.F.length;
@@ -2393,15 +2401,43 @@ function nomFichier(ext){
   const code = slugGroupement();
   return "BILAN_" + code + "_" + E.trimestre + "_" + (E.exercice || "exercice").replace(/[^\w-]/g,"") + "." + ext;
 }
+/* Les tableaux réseau pèsent plus d'un Mo une fois lus. Le localStorage est partagé par
+   toutes les applis publiées sous la même adresse github.io et plafonne à quelques Mo :
+   les tableaux vont donc dans IndexedDB, seul le bilan en cours reste en localStorage. */
+const BASE_IDB = {
+  ouvrir(){
+    return new Promise((ok, ko) => {
+      if(!window.indexedDB) return ko(new Error("IndexedDB indisponible"));
+      const r = indexedDB.open("bilan-fdr", 1);
+      r.onupgradeneeded = () => r.result.createObjectStore("kv");
+      r.onsuccess = () => ok(r.result);
+      r.onerror = () => ko(r.error);
+    });
+  },
+  async lire(){
+    const db = await this.ouvrir();
+    return new Promise((ok, ko) => { const q = db.transaction("kv").objectStore("kv").get("base"); q.onsuccess = () => ok(q.result || null); q.onerror = () => ko(q.error); });
+  },
+  async ecrire(v){
+    const db = await this.ouvrir();
+    return new Promise((ok, ko) => { const t = db.transaction("kv", "readwrite"); t.objectStore("kv").put(v, "base"); t.oncomplete = () => ok(true); t.onerror = () => ko(t.error); });
+  }
+};
+function avertirStockage(t){
+  const c = document.getElementById("etat_cadre");
+  c.className = "etat sousimp ko"; c.textContent = t;
+}
+async function sauverBase(){
+  try{ await BASE_IDB.ecrire(JSON.parse(JSON.stringify(E.base))); }
+  catch(e){ avertirStockage("Les tableaux sont chargés mais ne pourront pas être conservés à la fermeture (" + e.message + "). Il faudra les réimporter."); }
+}
 let minuteur = null;
 function sauver(){
   clearTimeout(minuteur);
   minuteur = setTimeout(() => {
-    if(!memo.ecrire(STOCKAGE, JSON.stringify(E))){
-      const c = document.getElementById("etat_cadre");
-      c.className = "etat sousimp ko";
-      c.textContent = "Mémoire du navigateur pleine : le bilan n'est plus enregistré automatiquement. Utilisez « Enregistrer ».";
-    }
+    const leger = Object.assign({}, E, {base:null});
+    if(!memo.ecrire(STOCKAGE, JSON.stringify(leger)))
+      avertirStockage("Mémoire du navigateur pleine : le bilan n'est plus enregistré automatiquement. Utilisez « Enregistrer ».");
   }, 500);
 }
 function exportJSON(){
@@ -2426,7 +2462,7 @@ async function ouvrir(input){
     if(d.type !== "bilan-fdr" || !d.etat) throw new Error("ce fichier n'est pas un bilan enregistré depuis l'appli");
     if(!confirm("Remplacer le bilan en cours par « " + f.name + " » ?")){ input.value = ""; return; }
     appliquer(d.etat);
-    remplirGroupements(); remplirChamps(); toutCalculer(); rendrePA(); sauver();
+    remplirGroupements(); remplirChamps(); toutCalculer(); rendrePA(); sauver(); sauverBase();
     const c = document.getElementById("etat_cadre"); c.className = "etat sousimp"; c.textContent = messageSources();
   }catch(err){ alert("Ouverture impossible : " + err.message); }
   input.value = "";
@@ -2448,16 +2484,23 @@ function remplirChamps(){
   CHAMPS_LIBRES.forEach(([id, k]) => { if(id !== "groupement") document.getElementById(id).value = E[k] || ""; });
   majMots();
 }
-function demarrer(){
+async function demarrer(){
   const brut = memo.lire(STOCKAGE);
   let repris = false;
   if(brut){ try{ const d = JSON.parse(brut); if(d && d.schema === SCHEMA){ appliquer(d); repris = true; } }catch(e){} }
+  // ancien brouillon qui contenait encore les tableaux : on les déplace vers IndexedDB
+  const ancien = Object.values(E.base).some(Boolean);
+  try{
+    const base = ancien ? null : await BASE_IDB.lire();
+    if(base) E.base = Object.assign({oss:null, perf:null, pmca:null, clients:null}, base);
+    if(ancien){ await sauverBase(); sauver(); }
+  }catch(e){}
   if(!repris){
     const auj = new Date(), dt = dernierTrimestreClos(auj);
     E.trimestre = dt.t; E.exercice = libEx(dt.ex); E.date = auj.toISOString().slice(0,10);
   }
   remplirGroupements(); remplirChamps();
-  if(repris){ const c = document.getElementById("etat_cadre"); c.textContent = messageSources(); }
+  if(Object.values(E.base).some(Boolean)){ const c = document.getElementById("etat_cadre"); c.className = "etat sousimp"; c.textContent = messageSources(); }
 
   CHAMPS_LIBRES.forEach(([id, k]) => {
     const el = document.getElementById(id);
