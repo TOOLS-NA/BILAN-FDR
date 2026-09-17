@@ -134,6 +134,8 @@ dialog#dlgRaz::backdrop{background:rgba(14,44,73,.45)}
 .razChoix .btn{display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:3px;padding:12px 14px}
 .razChoix .btn span{font-weight:400;font-size:13px;opacity:.92}
 .btn.danger{background:var(--rouge)}
+.tb td .tag{font-size:10.5px;font-weight:600;color:var(--gris);border:1px solid var(--trait);border-radius:10px;padding:0 6px;margin-left:6px}
+.tb td.d b{color:inherit}
 .barreD{position:relative;display:inline-block;width:90px;height:8px;background:#EEF2F6;border-radius:4px;vertical-align:middle}
 .barreD::after{content:"";position:absolute;left:50%;top:-3px;bottom:-3px;width:1px;background:#9AA8B5}
 .barreD i{position:absolute;top:0;bottom:0;background:var(--gris)}
@@ -190,7 +192,8 @@ dialog#dlgRaz::backdrop{background:rgba(14,44,73,.45)}
     </select>
     <input type="text" id="exercice" aria-label="Exercice" placeholder="2025-2026">
     <select id="groupement" aria-label="Groupement" disabled><option value="">Groupement</option></select>
-    <label class="hcase" id="libStep2" title="Ajouter au bilan les magasins STEP2 du groupement"><input type="checkbox" id="step2"> STEP2</label>
+    <label class="hcase" id="libStep4" title="Magasins STEP 4 du groupement"><input type="checkbox" id="step4" checked> STEP 4</label>
+    <label class="hcase" id="libStep2" title="Magasins STEP 2 du groupement"><input type="checkbox" id="step2"> STEP 2</label>
     <input type="date" id="dateBilan" aria-label="Date du bilan">
     <div class="hactions">
       <button class="hbtn ghost" onclick="ouvrirRaz()">RAZ</button>
@@ -324,16 +327,28 @@ dialog#dlgRaz::backdrop{background:rgba(14,44,73,.45)}
   </div>
 </section>
 
-<!-- MAIL -->
+<!-- CR DE BILAN -->
 <section class="actions">
-  <h2>Mail de bilan et feuille de route</h2>
-  <p class="sous">Adressé au dirigeant du groupement. Recomposé à partir des chiffres, du bilan et du plan d'action, modifiable avant envoi.</p>
+  <h2>CR de bilan <span class="compte">1000 mots maximum</span></h2>
+  <p class="sous">Structure « En synthèse » : pilotage, performances quantitatives, OSS, dispositif de réaction rapide, résultats OSS par population, encadrement, conclusion. Recomposé à partir des chiffres, modifiable avant envoi.</p>
   <div class="barre" style="margin-top:0">
-    <button class="btn" onclick="composerFDR()">Composer le mail</button>
-    <button class="btn sec" onclick="copierFDR()">Copier</button>
+    <button class="btn" onclick="composerFDR()">Composer le CR</button>
+    <button class="btn sec" onclick="copier('texteFDR','motsFDR')">Copier</button>
     <span class="etat" id="motsFDR"></span>
   </div>
-  <textarea id="texteFDR" style="min-height:340px;margin-top:10px"></textarea>
+  <textarea id="texteFDR" style="min-height:380px;margin-top:10px"></textarea>
+</section>
+
+<!-- PLAN D'ACTION À ENVOYER -->
+<section class="actions">
+  <h2>Plan d'action à envoyer <span class="compte">1000 mots maximum</span></h2>
+  <p class="sous">Priorités, objectifs chiffrés, actions par axe et dispositif de suivi, repris du plan d'action ci-dessus. Raccourci automatiquement au-delà de 1000 mots.</p>
+  <div class="barre" style="margin-top:0">
+    <button class="btn" onclick="composerPlan()">Composer le plan d'action</button>
+    <button class="btn sec" onclick="copier('textePlan','motsPlan')">Copier</button>
+    <span class="etat" id="motsPlan"></span>
+  </div>
+  <textarea id="textePlan" style="min-height:300px;margin-top:10px"></textarea>
 </section>
 
 </main>
@@ -375,9 +390,9 @@ const AUTOTABLE_URL = "https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.
 /* ===== état ===== */
 function etatVide(){
   return {
-    schema:SCHEMA, trimestre:"T4", exercice:"", groupement:"", step2:false, date:"", franchise:"", participants:"",
+    schema:SCHEMA, trimestre:"T4", exercice:"", groupement:"", step4:true, step2:false, date:"", franchise:"", participants:"",
     base:{oss:null, perf:null, pmca:null, clients:null},
-    lectureCR:"", retourFranchise:"", objectifs:{}, pa:[], prochainPoint:"", fdr:""
+    lectureCR:"", retourFranchise:"", objectifs:{}, pa:[], prochainPoint:"", fdr:"", planMail:""
   };
 }
 const E = etatVide();
@@ -1197,26 +1212,44 @@ function groupementChoisi(){
   const l = listeGroupements();
   return l.find(x => x.cle === nk(E.groupement)) || null;
 }
-function membres(g, avecStep2){
+/* populations retenues : STEP 4 (magasins franchisés) et / ou STEP 2 */
+const LIB_POP = {F:"STEP 4", S2:"STEP 2"};
+function populations(g){
   if(!g) return [];
-  return g.F.concat((avecStep2 || !g.F.length) ? g.S2 : []);
+  const p = [];
+  if(E.step4 !== false && g.F.length) p.push("F");
+  if(E.step2 && g.S2.length) p.push("S2");
+  return p.length ? p : (g.F.length ? ["F"] : ["S2"]);
 }
+function libPops(pops){ return pops.map(p => LIB_POP[p]).join(" + "); }
+function codesDe(g, pops){ return g ? pops.flatMap(p => g[p] || []) : []; }
 function remplirGroupements(){
   const sel = document.getElementById("groupement");
   const l = listeGroupements();
-  const opt = x => "<option value='" + esc(x.nom) + "'>" + esc(x.nom) + " (" + x.F.length + (x.S2.length ? " + " + x.S2.length + " STEP2" : "") + ")</option>";
+  const opt = x => "<option value='" + esc(x.nom) + "'>" + esc(x.nom) + " (" + [x.F.length ? x.F.length + " STEP 4" : "", x.S2.length ? x.S2.length + " STEP 2" : ""].filter(Boolean).join(" + ") + ")</option>";
   const f = l.filter(x => x.F.length), s = l.filter(x => !x.F.length);
   sel.innerHTML = "<option value=''" + (l.length ? "" : " disabled") + ">" + (l.length ? "Choisir un groupement" : "Groupement") + "</option>" +
-    (f.length ? "<optgroup label='Franchisés'>" + f.map(opt).join("") + "</optgroup>" : "") +
-    (s.length ? "<optgroup label='STEP2 uniquement'>" + s.map(opt).join("") + "</optgroup>" : "");
+    (f.length ? "<optgroup label='Avec magasins STEP 4'>" + f.map(opt).join("") + "</optgroup>" : "") +
+    (s.length ? "<optgroup label='STEP 2 uniquement'>" + s.map(opt).join("") + "</optgroup>" : "");
   const g = groupementChoisi();
   sel.value = g ? g.nom : "";
   sel.disabled = !l.length;
   sel.title = l.length ? "Groupement à analyser" : "La liste des groupements se remplit après l'import de l'Evol OSS Facturé";
-  const c = document.getElementById("step2");
-  c.checked = !!E.step2;
-  c.disabled = !g || !g.S2.length || !g.F.length;
-  document.getElementById("libStep2").style.opacity = c.disabled ? .5 : 1;
+  const pops = populations(g);
+  [["step4","F","libStep4"],["step2","S2","libStep2"]].forEach(([id, p, lib]) => {
+    const c = document.getElementById(id);
+    c.checked = pops.includes(p);
+    c.disabled = !g || !g[p].length;
+    document.getElementById(lib).style.opacity = c.disabled ? .5 : 1;
+  });
+}
+/* au moins une population reste cochée */
+function changerPopulation(id, coche){
+  const g = groupementChoisi();
+  const avant = {step4:E.step4, step2:E.step2};
+  E[id] = coche;
+  if(g && !((E.step4 !== false && g.F.length) || (E.step2 && g.S2.length))){ E.step4 = avant.step4; E.step2 = avant.step2; }
+  remplirGroupements(); toutCalculer(); sauver();
 }
 function slugGroupement(){ return (E.groupement || "groupement").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^\w]+/g,"-").replace(/^-|-$/g,""); }
 
@@ -1330,49 +1363,65 @@ function libStatut(st, pluriel){
 }
 
 function contexte(){
-  const g = groupementChoisi(), b = E.base, ctx = {g:g, codes:[]};
-  if(!g) return ctx;
-  const codes = membres(g, E.step2), ref = referentiel();
-  const autres = listeGroupements().filter(x => x.F.length).map(x => membres(x, E.step2));
+  const g = groupementChoisi();
+  if(!g) return {g:null, codes:[], pops:[]};
+  const pops = populations(g);
+  const ctx = contexteCodes(g, pops);
+  ctx.pops = pops;
+  if(pops.length === 2) ctx.parPop = pops.map(p => ({pop:p, lib:LIB_POP[p], ctx:contexteCodes(g, [p])}));
+  return ctx;
+}
+function contexteCodes(g, pops){
+  const b = E.base, ctx = {g:g, codes:[]};
+  const codes = codesDe(g, pops), ref = referentiel();
+  const autres = listeGroupements().filter(x => pops.every(p => x[p].length)).map(x => codesDe(x, pops));
+  const dans = s => pops.includes(s.statut);
+  const nomRes = "Réseau " + libPops(pops);
   ctx.codes = codes;
+  ctx.libRes = nomRes;
   ctx.nomSite = c => (ref[c] && ref[c].site) || c;
+  ctx.statutDe = c => (ref[c] && ref[c].statut) || "";
   const partie = (sites, agreg, refs, pairsDe, details) => sites.length ? {v:agreg(sites), n:sites.length, sites:sites, refs:refs, details:details,
     pairs:autres.map(cs => { const l = pairsDe(cs); return l.length ? {v:agreg(l), n:l.length} : null; }).filter(Boolean)} : null;
 
   if(b.oss){
     const an = b.oss.annees;
     const pris = cs => cs.map(c => b.oss.sites[c]).filter(Boolean).map(s => s.v);
-    const sitesF = Object.values(b.oss.sites).filter(s => s.statut === "F" && nk(s.cr) !== "hors analyse");
+    const sitesR = Object.values(b.oss.sites).filter(s => dans(s) && nk(s.cr) !== "hors analyse");
+    const tot = pops.map(p => b.oss.totaux[p]).filter(Boolean);
+    const vR = tot.length === pops.length ? (tot.length === 1 ? tot[0] : agregatOss(tot)) : agregatOss(sitesR.map(s => s.v));
     const c = partie(pris(codes), l => vueOss(agregatOss(l), an),
-      [{nom:"Réseau F", v:vueOss(b.oss.totaux.F || agregatOss(sitesF.map(s => s.v)), an), n:sitesF.length}], pris,
+      [{nom:nomRes, v:vueOss(vR, an), n:sitesR.length}], pris,
       codes.filter(cd => b.oss.sites[cd]).map(cd => ({code:cd, site:b.oss.sites[cd].site, v:vueOss(b.oss.sites[cd].v, an)})));
     if(c) ctx.oss = c;
   }
   if(b.perf){
     const pris = cs => cs.map(c => b.perf.sites[c]).filter(Boolean);
-    const sitesF = Object.values(b.perf.sites).filter(s => s.statut === "F");
-    const c = partie(pris(codes), agregatPerf, [{nom:"Réseau F", v:b.perf.totaux.F || agregatPerf(sitesF), n:sitesF.length}], pris,
+    const sitesR = Object.values(b.perf.sites).filter(dans);
+    const tot = pops.map(p => b.perf.totaux[p]).filter(Boolean);
+    const vR = tot.length === pops.length ? (tot.length === 1 ? tot[0] : agregatPerf(tot.map(v => ({v:v})))) : agregatPerf(sitesR);
+    const c = partie(pris(codes), agregatPerf, [{nom:nomRes, v:vR, n:sitesR.length}], pris,
       pris(codes).map(s => ({code:s.code, site:s.site, v:s.v})));
-    if(c){ c.reseauSites = sitesF; ctx.perf = c; }
+    if(c){ c.reseauSites = sitesR; ctx.perf = c; }
   }
   const sp = saisonsPmca();
   if(sp){
     const m = (sa, c) => sa && sa.sites[c] ? sa.sites[c].m : null;
     const pris = cs => cs.filter(c => sp.N.sites[c]);
     const comp = cs => ({N:agregatPmca(cs.map(c => m(sp.N, c))), N1:sp.N1 ? agregatPmca(cs.map(c => m(sp.N1, c))) : null});
-    const fN = Object.values(sp.N.sites).filter(s => s.statut === "F").map(s => s.code);
-    const fN1 = sp.N1 ? Object.values(sp.N1.sites).filter(s => s.statut === "F").map(s => s.code) : [];
+    const fN = Object.values(sp.N.sites).filter(dans).map(s => s.code);
+    const fN1 = sp.N1 ? Object.values(sp.N1.sites).filter(dans).map(s => s.code) : [];
     const R = {N:agregatPmca(fN.map(c => m(sp.N, c))), N1:sp.N1 ? agregatPmca(fN1.map(c => m(sp.N1, c))) : null};
-    const c = partie(pris(codes), comp, [{nom:"Réseau F", v:R, n:fN.length}], pris,
+    const c = partie(pris(codes), comp, [{nom:nomRes, v:R, n:fN.length}], pris,
       pris(codes).map(cd => ({code:cd, site:sp.N.sites[cd].site, v:comp([cd])})));
     if(c){ c.sp = sp; ctx.pmca = c; }
   }
   if(b.clients){
     const pris = cs => cs.map(c => b.clients.sites[c]).filter(Boolean);
-    const sitesF = Object.values(b.clients.sites).filter(s => s.statut === "F");
-    const c = partie(pris(codes), agregatClients, [{nom:"Réseau F", v:agregatClients(sitesF), n:sitesF.length}], pris,
-      pris(codes).map(s => ({code:s.code, site:s.site, v:s.v})));
-    if(c){ c.reseauSites = sitesF; ctx.clients = c; }
+    const sitesR = Object.values(b.clients.sites).filter(dans);
+    const c = sitesR.length ? partie(pris(codes), agregatClients, [{nom:nomRes, v:agregatClients(sitesR), n:sitesR.length}], pris,
+      pris(codes).map(s => ({code:s.code, site:s.site, v:s.v}))) : null;
+    if(c){ c.reseauSites = sitesR; ctx.clients = c; }
   }
   return ctx;
 }
@@ -1490,11 +1539,12 @@ function couverture(c, ctx){
     (manquants.length ? " (absent" + (manquants.length > 1 ? "s" : "") + " : " + manquants.map(ctx.nomSite).join(", ") + ")" : "");
 }
 /* détail magasin par magasin, puis total groupement et réseau */
-function tableDetail(c, colonnes, tri){
+function tableDetail(c, colonnes, tri, ctx){
   const lignesD = c.details.slice();
+  const repere = x => (ctx && ctx.pops && ctx.pops.length === 2) ? " <span class='tag'>" + LIB_POP[ctx.statutDe(x.code)] + "</span>" : "";
   if(tri) lignesD.sort((a, b) => (tri(b.v) || 0) - (tri(a.v) || 0));
   const ent = ["Magasin"].concat(colonnes.map(x => x[0]));
-  const rows = lignesD.map(x => [esc(x.site)].concat(colonnes.map(col => col[1](x.v))));
+  const rows = lignesD.map(x => [esc(x.site) + repere(x)].concat(colonnes.map(col => col[1](x.v))));
   const classes = lignesD.map(() => "");
   if(c.details.length > 1){ rows.push(["<b>Groupement</b>"].concat(colonnes.map(col => col[1](c.v, true)))); classes.push("total"); }
   rows.push([c.refs[0].nom + " <span class='second'>moyenne par magasin</span>"].concat(colonnes.map(col => col[1](c.refs[0].v, true, c.refs[0].n)))); classes.push("sec");
@@ -1515,10 +1565,16 @@ function rendreOss(ctx){
     (an.length > 1 ? " contre " + esc(an[an.length-2]) : "") + (E.base.oss.date ? ", données au " + dateFr(E.base.oss.date) : "") +
     ". Rang parmi les " + c.pairs.length + " groupements.</p>";
   h += tableComparee(lignes(OSS_LIGNES, c));
+  h += tablePopulations(ctx, "oss", POP_OSS);
+  const inter = magasinsIntervention(ctx, E.trimestre);
+  h += "<h3 class='sousTitre'>Dispositif de réaction rapide sur le " + esc(E.trimestre) + " (4 semaines consécutives à -15 % ou moins)</h3>" +
+    (inter.length ? tableSimple(["Magasin","Population","Périodes concernées (OSS hors salons, quinzaines)"],
+      inter.map(x => [esc(x.site), LIB_POP[x.statut] || "", {t:esc(x.periodes.join(" · ")), cl:"sec"}]))
+    : vide("Aucun magasin du groupement n'a atteint le seuil sur le trimestre."));
   // trimestres
   const R = c.refs[0].v;
   h += "<h3 class='sousTitre'>CA facturé par trimestre</h3>" + tableSimple(
-    ["Trimestre","N-1","Prév","Réalisé","Δ Prév","Δ N-1","Réseau F Δ N-1","Écart","Portefeuille N-1","Portefeuille N"],
+    ["Trimestre","N-1","Prév","Réalisé","Δ Prév","Δ N-1",c.refs[0].nom + " Δ N-1","Écart","Portefeuille N-1","Portefeuille N"],
     ["T1","T2","T3","T4"].map(q => {
       const x = c.v.q[q] || {}, r = R.q[q] || {};
       const dN = variation("eur", x.real, Z(x.n1)), dP = variation("eur", x.real, Z(x.prev)), dR = variation("eur", r.real, Z(r.n1));
@@ -1555,7 +1611,7 @@ function rendreOss(ctx){
     ["PM signé", v => cVal(oy(v,"N","pmSigne"),"eur2")],
     ["Δ trafic OS", v => cEvol(variation("eur", oy(v,"N","nbFacOs"), Z(oy(v,"N1","nbFacOs"))),"eur")]
   ];
-  h += "<h3 class='sousTitre'>Détail par magasin</h3>" + tableDetail(c, col, v => oy(v,"N","facture"));
+  h += "<h3 class='sousTitre'>Détail par magasin</h3>" + tableDetail(c, col, v => oy(v,"N","facture"), ctx);
   z.innerHTML = h;
 }
 
@@ -1577,8 +1633,8 @@ function rendrePerf(ctx){
   z.innerHTML = "<p class='sous'>Groupement " + esc(ctx.g.nom) + " : " + esc(couverture(c, ctx)) + ". " + esc(titre) +
       ". Pour les volumes, le réseau est ramené à la moyenne par magasin.</p>" +
     "<h3 class='sousTitre'>Accessoires</h3>" + tableComparee(lignes(PERF_ACC, c)) +
-    "<h3 class='sousTitre'>Prestation</h3>" + tableComparee(lignes(PERF_PRESTA, c)) +
-    "<h3 class='sousTitre'>Détail par magasin</h3>" + tableDetail(c, col, v => v.caRea);
+    "<h3 class='sousTitre'>Prestation</h3>" + tableComparee(lignes(PERF_PRESTA, c)) + tablePopulations(ctx, "perf", POP_PERF) +
+    "<h3 class='sousTitre'>Détail par magasin</h3>" + tableDetail(c, col, v => v.caRea, ctx);
 }
 
 /* --- partie PMCA --- */
@@ -1593,6 +1649,7 @@ function rendrePmca(ctx){
   let h = "<p class='sous'>Groupement " + esc(ctx.g.nom) + " : " + esc(couverture(c, ctx)) + ". Saison " + esc(sp.libN) +
     (sp.libN1 ? " contre " + esc(sp.libN1) : "") + ", 12 mois glissants. Les clients sont additionnés magasin par magasin.</p>";
   h += "<h3 class='sousTitre'>Tous clients</h3>" + tableComparee(lignes(PMCA_LIGNES.filter(d => d.type !== "rang"), c), {libReal:"N"});
+  h += tablePopulations(ctx, "pmca", POP_PMCA);
   const typeLignes = PMCA_TYPES.filter(t => t !== "TOUS").map(t => {
     const pN = partPmca(v,"N",t,"T"), pN1 = partPmca(v,"N1",t,"T"), dp = pN !== null && pN1 !== null ? pN - pN1 : null;
     const pmN = pm(v,"N",t,"T","pmca"), pmN1 = pm(v,"N1",t,"T","pmca");
@@ -1601,7 +1658,7 @@ function rendrePmca(ctx){
       fmt(pmN,"eur2"), cEvol(variation("eur", pmN, pmN1),"eur"), fmt(pm(v,"N",t,"T","freq"),"dec2"), fmt(partCaPmca(v,"N",t),"pct")];
   });
   h += "<h3 class='sousTitre'>Mix clientèle</h3>" + tableSimple(
-    ["Type de client","Nb clients","Part N","Part N-1","Δ part","Part réseau F","PMCA","Δ PMCA N-1","Fréquence","Part du CA"], typeLignes);
+    ["Type de client","Nb clients","Part N","Part N-1","Δ part","Part " + minuscule(c.refs[0].nom),"PMCA","Δ PMCA N-1","Fréquence","Part du CA"], typeLignes);
   const deptLignes = [["D","Département d'origine"],["HD","Hors département"]].map(([per, lib]) => {
     const pN = partPmca(v,"N","TOUS",per), pN1 = partPmca(v,"N1","TOUS",per), dp = pN !== null && pN1 !== null ? pN - pN1 : null;
     const pmN = pm(v,"N","TOUS",per,"pmca"), pmN1 = pm(v,"N1","TOUS",per,"pmca");
@@ -1609,7 +1666,7 @@ function rendrePmca(ctx){
       {t:fmt(partPmca(R,"N","TOUS",per),"pct"), cl:"sec"}, fmt(pmN,"eur2"), cEvol(variation("eur", pmN, pmN1),"eur")];
   });
   h += "<h3 class='sousTitre'>Origine géographique de la clientèle</h3>" + tableSimple(
-    ["Périmètre","Nb clients","Part N","Part N-1","Δ part","Part réseau F","PMCA","Δ PMCA N-1"], deptLignes);
+    ["Périmètre","Nb clients","Part N","Part N-1","Δ part","Part " + minuscule(c.refs[0].nom),"PMCA","Δ PMCA N-1"], deptLignes);
   const g = (x, p, k) => pm(x, p, "TOUS", "T", k);
   const col = [
     ["Nb clients", (x, tot, n) => cVal(n ? div(g(x,"N","nbCli"), n) : g(x,"N","nbCli"),"ent")],
@@ -1619,7 +1676,7 @@ function rendrePmca(ctx){
     ["Part CFD", x => cVal(partPmca(x,"N","CFD","T"),"pct")],
     ["Rang I+F", (x, tot) => tot ? "" : cVal(g(x,"N","rang"),"rang")]
   ];
-  h += "<h3 class='sousTitre'>Détail par magasin</h3>" + tableDetail(c, col, x => g(x,"N","ca"));
+  h += "<h3 class='sousTitre'>Détail par magasin</h3>" + tableDetail(c, col, x => g(x,"N","ca"), ctx);
   z.innerHTML = h;
 }
 
@@ -1642,11 +1699,11 @@ function rendreClients(ctx){
   const c = ctx.clients;
   if(!c){ z.innerHTML = absent("Synthèse client", ctx); return; }
   let h = "<p class='sous'>Groupement " + esc(ctx.g.nom) + " : " + esc(couverture(c, ctx)) + ". Exercice complet" +
-    (E.base.clients.date ? " au " + dateFr(E.base.clients.date) : "") + ", réseau F recalculé sur " + c.refs[0].n + " franchisés.</p>";
+    (E.base.clients.date ? " au " + dateFr(E.base.clients.date) : "") + ", " + minuscule(c.refs[0].nom) + " recalculé sur " + c.refs[0].n + " magasins. La Synthèse client ne couvre pas les STEP 2.</p>";
   h += "<h3 class='sousTitre'>Exercice</h3>" + tableComparee(lignes(CLIENTS_LIGNES, c));
   const t = tendanceCA(c);
   h += "<h3 class='sousTitre'>Tendance du CA sur quatre exercices</h3>" + tableSimple(
-    ["Exercice","CA groupement","Δ","Réseau F à périmètre comparable","Écart",""],
+    ["Exercice","CA groupement","Δ",c.refs[0].nom + " à périmètre comparable","Écart",""],
     t.map(x => [x.ex, fmt(x.val,"eur"), cEvol(x.ev,"eur"), {t:fmtPct(x.evR), cl:"sec"},
       {t:x.ev !== null && x.evR !== null ? fmtPts(x.ev - x.evR) : "—", cl:"d " + classe(x.ev !== null && x.evR !== null ? x.ev - x.evR : null, S_VIGIL)},
       {t:barre(x.ev), cl:"colBarre"}]));
@@ -1656,10 +1713,60 @@ function rendreClients(ctx){
     ["Nb clients", (v, tot, n) => cVal(n ? div(v.nbCli, n) : v.nbCli,"ent")], ["Part nouveaux", v => cVal(v.ratioNouv,"pct")],
     ["PMC", v => cVal(v.pmc,"eur2")], ["Signé / Total fact", v => cVal(v.txSigne,"pct")], ["Portefeuille / CA", v => cVal(v.portSurCa,"pct")]
   ];
-  h += "<h3 class='sousTitre'>Détail par magasin</h3>" + tableDetail(c, col, v => v.caN);
+  h += "<h3 class='sousTitre'>Détail par magasin</h3>" + tableDetail(c, col, v => v.caN, ctx);
   if(E.base.clients.colonneSuspecte)
     h += "<p class='etat sousimp' style='margin-top:10px'>La colonne « % Client qui ne sont pas revenu » reprend exactement le ratio de nouveaux clients sur toutes les lignes du fichier : elle n'est pas exploitée, à vérifier à la source.</p>";
   z.innerHTML = h;
+}
+
+/* comparaison des populations quand STEP 4 et STEP 2 sont cochés */
+function tablePopulations(ctx, part, desc){
+  if(!ctx.parPop) return "";
+  const cols = ctx.parPop.map(x => ({lib:x.lib, c:x.ctx[part]})).filter(x => x.c);
+  if(cols.length < 2) return "";
+  cols.push({lib:"Ensemble", c:ctx[part]});
+  const ev = cols.map(x => lignes(desc, x.c));
+  let h = "<h3 class='sousTitre'>STEP 4 et STEP 2</h3><div class='enrobe'><table class='tb'><thead><tr><th>Indicateur</th>";
+  cols.forEach(x => h += "<th>" + esc(x.lib) + "</th><th>" + esc(x.c.refs[0].nom) + "</th>");
+  h += "</tr></thead><tbody>";
+  desc.forEach((d, i) => {
+    h += "<tr><td>" + esc(d.nom) + "</td>";
+    cols.forEach((x, j) => {
+      const o = ev[j][i], r = o.refs[0];
+      if(d.n1 && !d.niveau){
+        h += cellule("<b>" + fmtEvolCell(o) + "</b>", "d " + classeEvol(d, o.dN)) + cellule(r ? fmtVar(d.fmt, r.ev) : "—", "sec");
+      } else {
+        h += cellule("<b>" + fmt(o.real, d.fmt) + "</b>") + cellule(r ? fmt(r.val, d.fmt) : "—", "sec");
+      }
+    });
+    h += "</tr>";
+  });
+  return h + "</tbody></table></div><p class='etat sousimp'>Évolutions sur N-1, ou valeurs pour les taux sans N-1.</p>";
+}
+const POP_OSS = ["oss","facture","nbFacOs","pmOs","nbSigne","pmSigne","signeSurOss","ossSurPrev"].map(k => OSS_LIGNES.find(d => d.k === k));
+const POP_PERF = [PERF_ACC[0], PERF_ACC[2], PERF_PRESTA[0], PERF_PRESTA[1]];
+const POP_PMCA = ["pmca","nbCli","freq","pmf"].map(k => PMCA_LIGNES.find(d => d.k === k));
+
+/* quinzaines d'un trimestre de l'exercice (S36 = début de T1) */
+function trimestreQuinzaine(lab){
+  const w = parseInt(String(lab).replace(/^S/i, ""), 10);
+  if(!isFinite(w)) return null;
+  return "T" + Math.min(4, Math.floor(((w - 36 + 52) % 52) / 13) + 1);
+}
+/* dispositif de réaction rapide : 4 semaines consécutives (2 quinzaines) à -15 % ou moins */
+const SEUIL_INTERVENTION = -0.15;
+function magasinsIntervention(ctx, trimestre){
+  const c = ctx.oss;
+  if(!c) return [];
+  const labs = E.base.oss.quinzaines.filter(l => !trimestre || trimestreQuinzaine(l) === trimestre);
+  return c.details.map(x => {
+    const periodes = [];
+    for(let i = 1; i < labs.length; i++){
+      const a = fini(x.v.hsPct[labs[i-1]]), b2 = fini(x.v.hsPct[labs[i]]);
+      if(a !== null && b2 !== null && a <= SEUIL_INTERVENTION && b2 <= SEUIL_INTERVENTION) periodes.push(labs[i-1].split("-")[0] + "-" + labs[i].split("-")[1] + " (" + fmtPct(a) + ", " + fmtPct(b2) + ")");
+    }
+    return periodes.length ? {site:nomCourt(x.site) || x.site, statut:ctx.statutDe(x.code), periodes:periodes} : null;
+  }).filter(Boolean);
 }
 
 /* ===== lecture ===== */
@@ -1671,7 +1778,7 @@ function niveauDe(x, sv, sa){
   return x <= -sa ? "alerte" : x <= -sv ? "vigilance" : x >= sv ? "favorable" : "neutre";
 }
 function enumere(l, max){ max = max || 5; return l.slice(0, max).join(", ") + (l.length > max ? " et " + (l.length - max) + " autre" + (l.length - max > 1 ? "s" : "") : ""); }
-function texteRang(o){ return o.rang ? o.rang + "e sur " + o.nb + " groupements" : ""; }
+function texteRang(o){ return o.rang ? o.rang + (o.rang === 1 ? "er" : "e") + " sur " + o.nb + " groupements" : ""; }
 
 /* évolution sur N-1 (et Prév), comparée à la tendance du réseau */
 function lectureEvolution(o, axe, partie){
@@ -1709,7 +1816,7 @@ function lectureNiveau(o, axe, partie, mots){
 }
 
 /* écarts entre magasins d'un même groupement */
-function lectureDispersion(c, ctx, mesure, nom, axe, partie){
+function lectureDispersion(c, ctx, mesure, nom, axe, partie, indicateur){
   if(!c || c.details.length < 2) return null;
   const l = c.details.map(x => ({site:nomCourt(x.site) || x.site, e:mesure(x.v)})).filter(x => x.e !== null).sort((a, b) => a.e - b.e);
   if(l.length < 2) return null;
@@ -1720,7 +1827,7 @@ function lectureDispersion(c, ctx, mesure, nom, axe, partie){
   const det = "De " + fmtPct(l[0].e) + " (" + l[0].site + ") à " + fmtPct(l[l.length-1].e) + " (" + l[l.length-1].site + ")." +
     (bas.length ? " En retrait : " + enumere(bas.map(x => x.site + " " + fmtPct(x.e))) + "." : "") +
     (haut.length ? " En progression : " + enumere(haut.slice().reverse().map(x => x.site + " " + fmtPct(x.e))) + "." : "");
-  return constat(niveau, axe, partie, titre, det, nom);
+  return constat(niveau, axe, partie, titre, det, indicateur || nom);
 }
 
 function lectureOss(ctx){
@@ -1739,7 +1846,7 @@ function lectureOss(ctx){
     const serie = ["T1","T2","T3","T4"].map(n => ({n:n, e:variation("eur", q(n).real, Z(q(n).n1))})).filter(y => y.e !== null);
     push(constat(niveau, "Perf ACC", "oss", titre,
       fmt(x.real,"eur") + " facturés" + (dP !== null ? ", " + fmtPct(dP) + " sur le prévisionnel" : "") +
-      (dR !== null ? ", réseau F " + fmtPct(dR) + " (écart " + fmtPts(ec) + ")" : "") + ". Trimestres : " +
+      (dR !== null ? ", " + minuscule(c.refs[0].nom) + " " + fmtPct(dR) + " (écart " + fmtPts(ec) + ")" : "") + ". Trimestres : " +
       serie.map(y => y.n + " " + fmtPct(y.e)).join(", ") + ".", "CA facturé " + t));
   }
   push(lectureEvolution(trouver(L,"facture"), "Perf ACC", "oss"));
@@ -1770,8 +1877,25 @@ function lectureOss(ctx){
       "OSS hors salons sur les 12 dernières semaines : " + (eur >= 0 ? "+" : "") + fmt(eur, "eur") + " sur N-1",
       nbPos + " quinzaine" + (nbPos > 1 ? "s" : "") + " sur 6 au-dessus de N-1 (" + labs[0] + " à " + labs[5] + ").", "OSS hors salons"));
   }
-  push(lectureDispersion(c, ctx, x => variation("eur", oy(x,"N","facture"), Z(oy(x,"N1","facture"))), "le facturé", "Perf ACC", "oss"));
+  push(lectureDispersion(c, ctx, x => variation("eur", oy(x,"N","facture"), Z(oy(x,"N1","facture"))), "le facturé", "Perf ACC", "oss", "Facturé par magasin"));
+  const inter = magasinsIntervention(ctx, E.trimestre);
+  if(inter.length)
+    out.push(constat(inter.length >= 3 ? "alerte" : "vigilance", "Perf ACC", "oss",
+      inter.length + " magasin" + (inter.length > 1 ? "s ont" : " a") + " déclenché le dispositif de réaction rapide sur le " + E.trimestre,
+      "4 semaines consécutives à -15 % ou moins sur l'OSS hors salons : " + enumere(inter.map(x => x.site), 8) + ".", "OSS hors salons"));
+  (ctx.parPop || []).forEach(p => { const x = syntheseOssPop(p.ctx.oss, p.lib); if(x) out.push(x); });
   return out;
+}
+/* résumé OSS d'une population : création de valeur, trafic, paniers */
+function syntheseOssPop(c, lib){
+  if(!c) return null;
+  const L = lignes(OSS_LIGNES, c), e = k => { const o = trouver(L, k); return o ? o.dN : null; };
+  const dO = e("oss");
+  if(dO === null) return null;
+  return constat(niveauDe(dO, S_VIGIL, S_ALERTE), "Perf ACC", "oss",
+    lib + " : OSS global " + (Math.abs(dO) < 0.005 ? "stable" : (dO > 0 ? "en progression de " : "en recul de ") + fmtVarAbs("eur", dO)),
+    "Facturé " + fmtPct(e("facture")) + ", trafic One-Shot " + fmtPct(e("nbFacOs")) + ", PM OS " + fmtPct(e("pmOs")) +
+    ", commandes signées " + fmtPct(e("nbSigne")) + ", PM signé " + fmtPct(e("pmSigne")) + " sur N-1 (" + c.n + " magasin" + (c.n > 1 ? "s" : "") + ").", "OSS " + lib);
 }
 
 function lecturePerf(ctx){
@@ -1800,7 +1924,7 @@ function lecturePerf(ctx){
     out.push(constat("vigilance", "Perf ACC", "perf",
       sansEgt.length === c.details.length ? "Aucun CA EGT sur l'exercice" : sansEgt.length + " magasin" + (sansEgt.length > 1 ? "s" : "") + " sans CA EGT sur l'exercice",
       (sansEgt.length < c.details.length ? "Sans EGT : " + enumere(sansEgt.map(x => nomCourt(x.site)), 6) + ". " : "") +
-      "Le réseau F cumule " + fmt(R.caEgt, "eur") + " de CA EGT, facturé par " + avec + " franchisés sur " + (c.reseauSites || []).length + ".", "CA EGT"));
+      "Le " + minuscule(c.refs[0].nom) + " cumule " + fmt(R.caEgt, "eur") + " de CA EGT, facturé par " + avec + " magasins sur " + (c.reseauSites || []).length + ".", "CA EGT"));
   }
   push(lectureEvolution(trouver(P,"presta"), "Presta", "perf"));
   const syn = lectureNiveau(trouver(P,"syn"), "Presta", "perf");
@@ -1818,7 +1942,7 @@ function lecturePerf(ctx){
     out.push(constat(poids >= 0.10 ? "vigilance" : "neutre", "Presta", "perf", "Potentiel presta non capté : " + fmt(v.gainTotal, "eur"),
       "Soit " + fmt(poids, "pct") + " du CA presta réalisé (synergie " + fmt(v.gainSyn, "eur") + ", FPPEC " + fmt(v.gainFppec, "eur") + ", FA " + fmt(v.gainFa, "eur") + ").", "Total gain presta"));
   }
-  push(lectureDispersion(c, ctx, x => variation("eur", x.caRea, Z(x.caN1)), "le CA accessoires", "Perf ACC", "perf"));
+  push(lectureDispersion(c, ctx, x => variation("eur", x.caRea, Z(x.caN1)), "le CA accessoires", "Perf ACC", "perf", "CA accessoires par magasin"));
   return out;
 }
 
@@ -1831,7 +1955,7 @@ function lecturePmca(ctx){
   const dec = decomposition(ctx);
   if(dec){
     const cli = trouver(L,"nbCli"), r0 = cli && cli.refs[0];
-    if(r0 && r0.ev !== null) dec.constat.detail += " Nombre de clients du réseau F : " + fmtPct(r0.ev) + (cli.rang ? ", " + texteRang(cli) + " sur l'évolution" : "") + ".";
+    if(r0 && r0.ev !== null) dec.constat.detail += " Nombre de clients du " + minuscule(r0.nom) + " : " + fmtPct(r0.ev) + (cli.rang ? ", " + texteRang(cli) + " sur l'évolution" : "") + ".";
     out.push(dec.constat);
   }
   const pC = partPmca(v,"N","CFD","T"), pC1 = partPmca(v,"N1","CFD","T"), pCR = partPmca(R,"N","CFD","T");
@@ -1841,18 +1965,18 @@ function lecturePmca(ctx){
     const niveau = (d1 !== null && d1 <= -0.02) || (dr !== null && dr <= -0.05) ? "vigilance" : (d1 !== null && d1 >= 0.02) ? "favorable" : "neutre";
     out.push(constat(niveau, "Clients", "pmca",
       "Clients CFD : " + fmt(pC,"pct") + " des clients" + (d1 !== null && Math.abs(d1) >= S_VIGIL_PT ? (d1 > 0 ? ", en hausse" : ", en baisse") : ""),
-      (d1 !== null ? fmtPts(d1) + " sur N-1, " : "") + (pCR !== null ? "réseau F à " + fmt(pCR,"pct") + ". " : "") +
+      (d1 !== null ? fmtPts(d1) + " sur N-1, " : "") + (pCR !== null ? minuscule(c.refs[0].nom) + " à " + fmt(pCR,"pct") + ". " : "") +
       (pmC !== null && pmT ? "PMCA des clients CFD " + fmt(pmC,"eur2") + " contre " + fmt(pmT,"eur2") + " tous clients confondus." : ""), "Part clients CFD"));
   }
   const pNQ = partPmca(v,"N","NQ","T"), pNQR = partPmca(R,"N","NQ","T");
   if(pNQ !== null && pNQR !== null && pNQ - pNQR >= 0.03)
     out.push(constat("vigilance", "Clients", "pmca", "Part de clients NON QUAL supérieure au réseau",
-      fmt(pNQ,"pct") + " des clients contre " + fmt(pNQR,"pct") + " pour le réseau F.", "Part clients NON QUAL"));
+      fmt(pNQ,"pct") + " des clients contre " + fmt(pNQR,"pct") + " pour le " + minuscule(c.refs[0].nom) + ".", "Part clients NON QUAL"));
   const pHD = partPmca(v,"N","TOUS","HD"), pHD1 = partPmca(v,"N1","TOUS","HD");
   if(pHD !== null && pHD1 !== null && Math.abs(pHD - pHD1) >= 0.02)
     out.push(constat("neutre", "Clients", "pmca", "Clientèle hors département " + (pHD > pHD1 ? "en hausse" : "en baisse"),
       fmt(pHD,"pct") + " des clients contre " + fmt(pHD1,"pct") + " en N-1, PMCA hors département " + fmt(pm(v,"N","TOUS","HD","pmca"),"eur2") + ".", "Part hors département"));
-  const x = lectureDispersion(c, ctx, y => variation("eur", pm(y,"N","TOUS","T","pmca"), pm(y,"N1","TOUS","T","pmca")), "le PMCA", "PMCA", "pmca");
+  const x = lectureDispersion(c, ctx, y => variation("eur", pm(y,"N","TOUS","T","pmca"), pm(y,"N1","TOUS","T","pmca")), "le PMCA", "PMCA", "pmca", "PMCA par magasin");
   if(x) out.push(x);
   return out;
 }
@@ -1874,7 +1998,7 @@ function lectureClients(ctx){
     push(constat(niveau, "Clients", "clients",
       "CA " + (ev >= 0 ? "en hausse" : "en baisse") + " de " + fmtVarAbs("eur", ev) + " depuis " + premier.ex +
         (ecart !== null && Math.abs(ecart) >= 0.05 ? (ecart > 0 ? ", mieux que le réseau" : ", moins bien que le réseau") : ""),
-      t.map(x => x.ex + " " + fmt(x.val,"eur")).join(", ") + (evR !== null ? ". Réseau F à périmètre comparable : " + fmtPct(evR) + "." : "."), "CA Fact exercice"));
+      t.map(x => x.ex + " " + fmt(x.val,"eur")).join(", ") + (evR !== null ? ". " + c.refs[0].nom + " à périmètre comparable : " + fmtPct(evR) + "." : "."), "CA Fact exercice"));
   }
   push(lectureNiveau(trouver(L,"ratioNouv"), "Clients", "clients", {haut:" plus élevée que le réseau", bas:" plus faible que le réseau"}));
   push(lectureNiveau(trouver(L,"pmc"), "Clients", "clients"));
@@ -2131,10 +2255,11 @@ function proposerPA(){
 /* ===== mail ===== */
 function compterMots(t){ return String(t || "").trim().split(/\s+/).filter(Boolean).length; }
 function majMots(){
-  const n = compterMots(document.getElementById("texteFDR").value);
-  const e = document.getElementById("motsFDR");
-  e.textContent = n ? n + " mots" + (n > MOTS_MAX ? ", au-delà des " + MOTS_MAX + " conseillés" : "") : "";
-  e.className = "etat" + (n > MOTS_MAX ? " ko" : "");
+  [["texteFDR","motsFDR"],["textePlan","motsPlan"]].forEach(([id, et]) => {
+    const n = compterMots(document.getElementById(id).value), e = document.getElementById(et);
+    e.textContent = n ? n + " mots" + (n > MOTS_MAX ? ", au-delà des " + MOTS_MAX + " autorisés" : "") : "";
+    e.className = "etat" + (n > MOTS_MAX ? " ko" : "");
+  });
 }
 function ligneMail(o){
   if(!o || o.real === null) return null;
@@ -2144,79 +2269,257 @@ function ligneMail(o){
   const r0 = o.refs[0];
   if(r0){
     if(d.n1 && !d.niveau && r0.ev !== null) b.push(minuscule(r0.nom) + " " + fmtVar(d.fmt, r0.ev));
-    else if((!d.n1 || d.niveau) && r0.val !== null && !d.pasEcart){
-      if(d.moyenne){ const n = (contexte()[o.partie] || {}).n; b.push((n ? "soit " + fmt(o.real / n, d.fmt) + " par magasin, " : "") + minuscule(r0.nom) + " " + fmt(r0.val, d.fmt) + " par magasin"); }
-      else b.push(minuscule(r0.nom) + " " + fmt(r0.val, d.fmt));
+    else if((!d.n1 || d.niveau) && r0.val !== null && !d.pasEcart) b.push(minuscule(r0.nom) + " " + fmt(r0.val, d.fmt));
+  }
+  return d.nom + " : " + fmt(o.real, d.fmt) + (b.length ? " (" + b.join(", ") + ")" : "");
+}
+
+/* ===== CR de bilan : structure « En synthèse » ===== */
+function pct1(e){ return virgule(Math.abs(e)*100, 1) + " %"; }
+function verbe(e, hausse, baisse, stable, seuil){
+  if(e === null || e === undefined) return null;
+  return Math.abs(e) < (seuil || 0.005) ? stable : (e > 0 ? hausse : baisse) + " de " + pct1(e);
+}
+/* puces « résultats OSS » d'une population ou de l'ensemble */
+function pucesOss(c, trimestre){
+  if(!c) return [];
+  const L = lignes(OSS_LIGNES, c), e = k => { const o = trouver(L, k); return o ? o.dN : null; }, v = k => { const o = trouver(L, k); return o ? o.real : null; };
+  const out = [];
+  const dO = e("oss"), dF = e("facture"), dT = e("nbFacOs"), dPm = e("pmOs"), dS = e("nbSigne"), dPs = e("pmSigne"), dSo = e("signeSurOss");
+  if(dO !== null) out.push("l'OSS global " + verbe(dO, "progresse", "recule", "est stable"));
+  if(dF !== null) out.push("l'activité magasin (facturé) " + verbe(dF, "progresse", "baisse", "est stable"));
+  const q = c.v.q && c.v.q[trimestre];
+  if(q && fini(q.real) !== null && Z(q.n1) !== null) out.push("le facturé du " + trimestre + " " + verbe(q.real/q.n1 - 1, "progresse", "recule", "est stable") +
+    (Z(q.prev) !== null ? ", " + fmtPct(q.real/q.prev - 1) + " par rapport au prévisionnel" : ""));
+  if(dT !== null) out.push("le trafic One Shot " + (dT <= -0.05 ? "diminue fortement (" + fmtPct(dT) + ")" : dT >= 0.05 ? "progresse fortement (" + fmtPct(dT) + ")" : verbe(dT, "progresse", "diminue", "est stable")));
+  if(dPm !== null){
+    let t = "le panier moyen One Shot " + verbe(dPm, "progresse", "recule", "est stable");
+    if(dT !== null && dT <= -S_VIGIL && dPm > 0) t += (dO !== null && dO < 0 ? " mais ne compense pas la baisse du trafic" : " et compense la baisse du trafic");
+    out.push(t);
+  }
+  if(dS !== null && dPs !== null){
+    let t = "le nombre de commandes signées " + verbe(dS, "progresse", "baisse", "est stable") + ", le panier moyen signé " + verbe(dPs, "progresse", "recule", "est stable");
+    if(dS < 0 && dPs > 0) t += (v("signe") !== null && e("signe") < 0 ? ", insuffisant pour compenser la baisse du nombre de ventes" : ", ce qui compense la baisse des volumes");
+    out.push(t);
+  }
+  if(dSo !== null) out.push("le signé représente " + fmt(v("signeSurOss"), "pct") + " de l'OSS (" + fmtPts(dSo) + " sur N-1)");
+  return out;
+}
+function enseignementOss(c){
+  if(!c) return null;
+  const L = lignes(OSS_LIGNES, c), e = k => { const o = trouver(L, k); return o ? o.dN : null; };
+  const dT = e("nbFacOs"), dPan = e("pmSigne") !== null ? e("pmSigne") : e("pmOs");
+  if(dT === null || dPan === null) return null;
+  if(dT < 0 && dPan > 0) return "le véritable levier de performance reste aujourd'hui la qualité de la transformation commerciale davantage que la simple fréquentation.";
+  if(dT < 0 && dPan <= 0) return "la baisse touche à la fois la fréquentation et la valeur des ventes : les deux leviers, trafic et transformation, sont à travailler simultanément.";
+  if(dT >= 0 && dPan < 0) return "la fréquentation se maintient mais la valeur par vente recule : la transformation commerciale est le levier prioritaire.";
+  return "fréquentation et transformation progressent ensemble : l'enjeu est de consolider cette dynamique dans la durée.";
+}
+
+function construireCR(ctx, n){
+  const nom = ctx.g ? ctx.g.nom : "";
+  const T = E.trimestre;
+  const L = [];
+  const puce = t => L.push("•\t" + t + (/[.:;]$/.test(t) ? "" : " ;"));
+  // au-delà d'un niveau de concision, une liste devient une phrase
+  const liste = (intro, items, seuil) => {
+    if(n >= seuil) L.push(intro.replace(/ :$/, "") + " " + items.slice(0, -1).join(", ") + (items.length > 1 ? (/^voire /.test(items[items.length-1]) ? ", " : " et ") : "") + items[items.length-1] + ".");
+    else { L.push(intro); items.forEach(puce); fermer(); }
+  };
+  const fermer = () => { if(L.length && /;$/.test(L[L.length-1])) L[L.length-1] = L[L.length-1].replace(/ ;$/, "."); };
+
+  L.push("En synthèse – Bilan " + libT() + (nom ? " " + nom : ""));
+  L.push("De la mesure de la performance à la création de valeur");
+  L.push("");
+  L.push("1. Une évolution du pilotage : ne plus mesurer uniquement le chiffre d'affaires mais créer durablement de la valeur");
+  L.push("Ce bilan ne présente pas uniquement les résultats commerciaux " + (nom ? "du groupement " + nom : "du groupement") +
+    ". Il expose une évolution du mode de management consistant à passer d'un pilotage basé sur les volumes de ventes à un pilotage orienté création de valeur.");
+  liste("Cette approche repose sur plusieurs outils complémentaires :", ["le TPRM, qui mesure la performance économique du magasin",
+    "l'OSS (One Shot Signé), qui analyse précisément la qualité de la performance commerciale",
+    "la Feuille de Route, qui transforme les constats en plans d'actions", "les KPI d'obligation, qui sécurisent l'exécution opérationnelle"], 3);
+  L.push("L'objectif est simple : disposer d'un processus décisionnel permettant d'identifier rapidement les causes d'une dérive puis de déclencher immédiatement les actions correctrices.");
+  L.push("");
+
+  // 2. performances quantitatives
+  const p = ctx.perf, A = p ? lignes(PERF_ACC, p) : [], P = p ? lignes(PERF_PRESTA, p) : [];
+  const dCA = p ? trouver(A, "caAcc").dN : null;
+  const qualif = dCA === null ? "à analyser" : dCA <= -S_VIGIL ? "globalement sous pression" : dCA >= S_VIGIL ? "globalement en progression" : "globalement stables";
+  L.push("2. Des performances quantitatives " + qualif);
+  const puces2 = [];
+  if(p){
+    const ca = trouver(A, "caAcc"), mg = trouver(A, "txMg"), pr = trouver(P, "presta"), syn = trouver(P, "syn");
+    if(ca.dN !== null) puces2.push((ca.dN <= -S_VIGIL ? "une dégradation des indices accessoires" : ca.dN >= S_VIGIL ? "une progression des indices accessoires" : "des indices accessoires stables") +
+      " : CA accessoires " + fmtPct(ca.dN) + " sur N-1" + (ca.dP !== null ? ", " + fmtPct(ca.dP) + " sur le prévisionnel" : "") + (ca.refs[0].ev !== null ? ", contre " + fmtPct(ca.refs[0].ev) + " pour le " + minuscule(ca.refs[0].nom) : ""));
+    if(mg && mg.dN !== null) puces2.push("un % marge à " + fmt(mg.real, "pct") + " (" + fmtPts(mg.dN) + " sur N-1)");
+    if(pr && pr.dN !== null) puces2.push("un CA presta " + fmtPct(pr.dN) + " sur N-1, avec un % synergie de " + fmt(syn.real, "pct") + " contre " + fmt(syn.refs[0].val, "pct") + " pour le réseau");
+  }
+  const disp = p ? p.details.map(x => ({s:nomCourt(x.site) || x.site, e:variation("eur", x.v.caRea, Z(x.v.caN1))}))
+    : ctx.oss ? ctx.oss.details.map(x => ({s:nomCourt(x.site) || x.site, e:variation("eur", oy(x.v,"N","facture"), Z(oy(x.v,"N1","facture")))})) : [];
+  const dl = disp.filter(x => x.e !== null).sort((a, b) => a.e - b.e);
+  if(dl.length >= 2){
+    const ecart = dl[dl.length-1].e - dl[0].e;
+    puces2.push((ecart >= 0.15 ? "une évolution contrastée selon les magasins, avec des écarts importants entre les meilleurs et les moins performants" : "une évolution homogène entre magasins") +
+      " : de " + fmtPct(dl[0].e) + " (" + dl[0].s + ") à " + fmtPct(dl[dl.length-1].e) + " (" + dl[dl.length-1].s + ")");
+  }
+  if(puces2.length){ L.push("Les différentes analyses mettent notamment en évidence :"); puces2.forEach(puce); fermer(); }
+  L.push("");
+
+  // 3. OSS
+  L.push("3. L'OSS devient le véritable outil de pilotage de la création de valeur");
+  L.push("Le cœur de ce bilan est consacré à l'OSS. L'OSS ne mesure pas seulement le chiffre d'affaires.");
+  liste("Il permet de suivre simultanément :", ["la création de valeur", "le trafic magasin", "le volume de ventes", "le panier moyen", "la capacité commerciale des équipes",
+   "la part des ventes \"One Shot\" versus \"Signé\"", "les performances comparées entre magasins"], 2);
+  L.push("L'OSS permet donc d'isoler immédiatement l'origine du problème afin d'adapter le plan d'action. C'est désormais l'outil principal de pilotage de la performance commerciale.");
+  L.push("");
+
+  // 4. dispositif
+  L.push("4. Un dispositif de réaction rapide face aux contre-performances");
+  liste("Dès qu'un magasin enregistre 4 semaines consécutives à plus de -15 %, une intervention terrain est automatiquement déclenchée. Cette intervention mobilise :", ["le Collab Réseau", "l'ARE", "voire l'OMM"], 2);
+  liste("L'objectif n'est pas d'effectuer un contrôle mais bien un accompagnement opérationnel visant à :", ["vérifier le respect des KPI", "analyser les causes de la baisse", "remettre rapidement le magasin dans une dynamique positive"], 2);
+  if(ctx.oss){
+    const inter = magasinsIntervention(ctx, T);
+    L.push(inter.length
+      ? "Sur le " + T + ", " + inter.length + " magasin" + (inter.length > 1 ? "s ont" : " a") + " atteint ce seuil sur l'OSS hors salons : " + inter.map(x => x.site + (ctx.pops.length === 2 ? " (" + LIB_POP[x.statut] + ")" : "")).join(", ") + "."
+      : "Sur le " + T + ", aucun magasin du groupement n'a atteint ce seuil sur l'OSS hors salons.");
+  }
+  L.push("Si la situation ne s'améliore pas, un nouvel accompagnement est immédiatement engagé. La philosophie est de corriger rapidement les écarts sans attendre les bilans trimestriels.");
+  L.push("");
+
+  // 5. résultats OSS
+  const o = ctx.oss, dO = o ? trouver(lignes(OSS_LIGNES, o), "oss").dN : null;
+  L.push("5. Les résultats OSS montrent un contexte commercial " + (dO === null ? "à analyser" : dO <= -S_VIGIL ? "difficile" : dO < 0 ? "tendu" : dO >= S_VIGIL ? "favorable" : "stable"));
+  if(o){
+    L.push("Les résultats consolidés montrent une tendance globale " + (dO <= -0.005 ? "négative" : dO >= 0.005 ? "positive" : "stable") + ".");
+    L.push("Pour l'ensemble " + nom + (ctx.pops.length === 2 ? " (STEP 4 et STEP 2)" : " (" + libPops(ctx.pops) + ")") + " :");
+    pucesOss(o, T).forEach(puce); fermer();
+    if(ctx.parPop){
+      L.push("Les analyses distinguent deux populations :");
+      ctx.parPop.forEach(pp => {
+        const c = pp.ctx.oss;
+        if(!c) return;
+        L.push(pp.lib);
+        L.push("Les magasins " + pp.lib + " (" + c.n + ") enregistrent :");
+        (n >= 1 ? pucesOss(c, T).filter(t => /^(l'OSS global|l'activité|le trafic|le nombre de commandes)/.test(t)) : pucesOss(c, T)).forEach(puce); fermer();
+      });
+    }
+    const ens = enseignementOss(o);
+    if(ens) L.push("L'enseignement principal est que " + ens);
+  }
+  L.push("");
+
+  // 6. encadrement
+  L.push("6. L'encadrement devient piloté par les résultats");
+  L.push("Les performances OSS servent directement à déterminer les actions d'encadrement. Le management devient beaucoup plus dynamique.");
+  liste("Autrement dit :", ["ce ne sont plus les visites qui produisent les analyses", "ce sont les analyses qui déterminent où intervenir"], 3);
+  L.push("Cette logique constitue une véritable inversion du pilotage traditionnel.");
+  L.push("");
+
+  // conclusion
+  L.push("Conclusion");
+  L.push("Ce bilan ne constitue pas seulement une photographie des résultats du " + T + ". Il présente une évolution profonde du mode de management du réseau.");
+  if(E.lectureCR) L.push(E.lectureCR.trim());
+  L.push("Les principaux enseignements sont :");
+  if(o){
+    const Lo = lignes(OSS_LIGNES, o), e = k => { const x = trouver(Lo, k); return x ? x.dN : null; };
+    const dT = e("nbFacOs"), dPs = e("pmSigne"), dS = e("nbSigne");
+    if(dO !== null){
+      const cause = dT !== null && dT <= -S_VIGIL ? "principalement en raison d'une baisse de percussion commerciale et du trafic One Shot"
+        : e("pmOs") !== null && e("pmOs") <= -S_VIGIL ? "principalement en raison d'un recul du panier moyen" : "sans cause unique dominante";
+      puce(dO < 0 ? "les performances commerciales restent sous pression, " + cause : "les performances commerciales progressent" + (dT !== null && dT > 0 ? ", portées par le trafic" : ""));
+    }
+    if(dPs !== null && dS !== null){
+      if(dPs > 0 && dS < 0) puce("la progression du panier moyen signé limite la dégradation, mais ne suffit pas à compenser la baisse des volumes");
+      else if(dPs > 0) puce("la progression du panier moyen signé soutient la création de valeur");
+      else puce("le recul du panier moyen signé pèse sur la création de valeur");
     }
   }
-  return "- " + d.nom + " : " + fmt(o.real, d.fmt) + (b.length ? " (" + b.join(", ") + ")" : "");
+  puce("l'OSS devient l'outil central de création de valeur, en permettant de comprendre précisément les causes des écarts de performance");
+  puce("le management évolue vers un pilotage beaucoup plus réactif, fondé sur les données et des interventions rapides");
+  puce("les KPI d'obligation structurent désormais l'exécution opérationnelle, afin de garantir une amélioration durable des performances"); fermer();
+  L.push("Au-delà des chiffres, ce bilan traduit une ambition : faire évoluer le réseau d'une logique de suivi des résultats vers une logique de pilotage permanent de la performance, où chaque indicateur déclenche des décisions concrètes et des actions ciblées au service de la création de valeur.");
+  L.push("");
+  L.push("Nous restons à votre disposition,");
+
+  return L.join("\n");
 }
 function composerFDR(){
   const ctx = contexte();
-  const L = [];
-  L.push("Objet : bilan " + libT() + " et feuille de route " + libTs() + (ctx.g ? " – groupement " + ctx.g.nom : ""));
-  L.push(""); L.push("Bonjour" + (E.franchise ? " " + E.franchise : "") + ",");
-  L.push("");
-  L.push("Suite à notre point" + (E.date ? " du " + dateFr(E.date) : "") + (E.participants ? " (" + E.participants + ")" : "") +
-    ", voici le bilan du " + libT() + " et la feuille de route du " + libTs() + ".");
-  if(ctx.g) L.push("Magasins concernés : " + ctx.codes.map(ctx.nomSite).join(", ") + ".");
-  L.push(""); L.push("BILAN " + libT().toUpperCase());
-  const bloc = (titre, liste, partie) => { const l = liste.map(o => { if(o) o.partie = partie; return ligneMail(o); }).filter(Boolean); if(l.length){ L.push(""); L.push(titre); l.forEach(x => L.push(x)); } };
-  if(ctx.oss){
-    const O = lignes(OSS_LIGNES, ctx.oss), q = ctx.oss.v.q[E.trimestre];
-    if(q && fini(q.real) !== null){ L.push(""); L.push("Facturé du " + E.trimestre + " : " + fmt(q.real,"eur") + " (" + fmtPct(variation("eur", q.real, Z(q.n1))) + " sur N-1, " + fmtPct(variation("eur", q.real, Z(q.prev))) + " sur le prévisionnel)"); }
-    bloc("OSS et facturé (cumul exercice)", ["facture","ossSurPrev","signeSurOss","pmSigne","portN"].map(k => trouver(O, k)), "oss");
-  }
-  if(ctx.perf){
-    const A = lignes(PERF_ACC, ctx.perf), P = lignes(PERF_PRESTA, ctx.perf);
-    bloc("Perfs ACC et Presta (cumul exercice)", ["caAcc","txMg","caHomme","presta","syn","txFa"].map(k => trouver(A, k) || trouver(P, k)), "perf");
-  }
-  if(ctx.pmca){
-    const M = lignes(PMCA_LIGNES, ctx.pmca);
-    bloc("PMCA (12 mois glissants)", ["pmca","nbCli","freq","pmf"].map(k => trouver(M, k)), "pmca");
-  }
-  if(ctx.clients){
-    const C = lignes(CLIENTS_LIGNES, ctx.clients);
-    bloc("Synthèse client", ["nbCli","ratioNouv","pmc","txSigne"].map(k => trouver(C, k)), "clients");
-  }
-  const tous = tousConstats(ctx);
-  const forts = tous.filter(x => x.niveau === "favorable");
-  const vigil = tous.filter(x => x.niveau === "vigilance" || x.niveau === "alerte");
-  if(forts.length){ L.push(""); L.push("Points forts"); forts.forEach(x => L.push("- " + x.titre)); }
-  if(vigil.length){ L.push(""); L.push("Points de vigilance"); vigil.forEach(x => L.push("- " + x.titre)); }
-  if(E.lectureCR){ L.push(""); L.push(E.lectureCR.trim()); }
-  if(E.retourFranchise){ L.push(""); L.push("Ton retour : " + E.retourFranchise.trim()); }
-
-  const objs = OBJECTIFS.filter(o => E.objectifs[o.k] && E.objectifs[o.k].obj !== null && E.objectifs[o.k].obj !== undefined);
-  const pot = lignesPotentiel(ctx).find(x => x.nom === "Total gain presta");
-  if(objs.length || E.pa.length){ L.push(""); L.push("FEUILLE DE ROUTE " + libTs().toUpperCase()); }
-  if(objs.length){
-    L.push(""); L.push("Objectifs");
-    objs.forEach(o => { const x = E.objectifs[o.k], d = variation(o.fmt, x.obj, x.n1);
-      L.push("- " + o.nom + " : " + fmt(x.obj, o.fmt) + (d !== null ? " (" + fmtVar(o.fmt, d) + " sur N-1)" : "")); });
-  }
-  if(pot && pot.val > 0){ L.push(""); L.push("Potentiel presta identifié sur l'exercice : " + fmt(pot.val, "eur") + "."); }
-  const actions = E.pa.filter(l => l.action || l.constat);
-  if(actions.length){
-    L.push(""); L.push("Plan d'action");
-    actions.slice().sort((a, b) => (a.priorite || "9").localeCompare(b.priorite || "9")).forEach(l => {
-      const meta = [l.responsable, l.echeance ? "pour le " + dateFr(l.echeance) : "", l.indicateur ? "suivi : " + l.indicateur : ""].filter(Boolean);
-      L.push("- [" + l.axe + "] " + (l.action || "action à définir") + (meta.length ? " (" + meta.join(", ") + ")" : ""));
-    });
-  }
-  if(E.prochainPoint){ L.push(""); L.push("Prochain point de suivi : " + dateFr(E.prochainPoint) + "."); }
-  L.push(""); L.push("Bonne journée,");
-  E.fdr = L.join("\n");
-  document.getElementById("texteFDR").value = E.fdr;
+  let t = construireCR(ctx, 0);
+  for(let n = 1; n <= 3 && compterMots(t) > MOTS_MAX; n++) t = construireCR(ctx, n);
+  E.fdr = t;
+  document.getElementById("texteFDR").value = t;
   majMots(); majJauge(ctx); sauver();
 }
-function copierFDR(){
-  const t = document.getElementById("texteFDR").value;
-  if(!t) return;
-  const ok = () => { const e = document.getElementById("motsFDR"); e.textContent = "Copié dans le presse-papiers."; e.className = "etat ok"; };
-  if(navigator.clipboard) navigator.clipboard.writeText(t).then(ok).catch(() => {});
-  else { document.getElementById("texteFDR").select(); document.execCommand("copy"); ok(); }
+
+/* ===== plan d'action à envoyer, 1000 mots maximum ===== */
+function composerPlan(){
+  const ctx = contexte();
+  const s = trimestreSuivant();
+  const construire = (compact, maxActions) => {
+    const L = [];
+    L.push("Objet : plan d'action " + libTs() + (ctx.g ? " – groupement " + ctx.g.nom : ""));
+    L.push("");
+    L.push("Bonjour" + (E.franchise ? " " + E.franchise : "") + ",");
+    L.push("");
+    L.push("Suite au bilan du " + libT() + (E.date ? " présenté le " + dateFr(E.date) : "") + ", voici le plan d'action retenu pour le " + libTs() +
+      (ctx.g ? " sur les magasins " + libPops(ctx.pops) + " du groupement " + ctx.g.nom : "") + ".");
+    const actions = E.pa.filter(l => String(l.action || "").trim()).slice().sort((a, b) => (a.priorite || "9").localeCompare(b.priorite || "9"));
+    const sansAction = E.pa.filter(l => !String(l.action || "").trim()).length;
+    const tous = tousConstats(ctx), alertes = tous.filter(x => x.niveau === "alerte").concat(tous.filter(x => x.niveau === "vigilance"));
+    // priorités
+    let prio = actions.slice(0, 3).map(l => "[" + l.axe + "] " + l.action);
+    if(!prio.length) prio = alertes.slice(0, 3).map(x => x.titre);
+    if(prio.length){ L.push(""); L.push("1. Nos priorités"); prio.forEach((t, i) => L.push((i+1) + ") " + t)); }
+    // objectifs
+    const objs = OBJECTIFS.filter(o => E.objectifs[o.k] && E.objectifs[o.k].obj !== null && E.objectifs[o.k].obj !== undefined);
+    if(objs.length){
+      L.push(""); L.push("2. Objectifs chiffrés du " + s.t);
+      objs.forEach(o => { const x = E.objectifs[o.k], d = variation(o.fmt, x.obj, x.n1);
+        L.push("- " + o.nom + " : " + fmt(x.obj, o.fmt) + (d !== null ? " (" + fmtVar(o.fmt, d) + " sur N-1)" : "")); });
+    }
+    // actions par axe
+    if(actions.length){
+      L.push(""); L.push("3. Actions par axe");
+      const liste = actions.slice(0, maxActions);
+      AXES.forEach(axe => {
+        const la = liste.filter(l => l.axe === axe);
+        if(!la.length) return;
+        L.push(""); L.push(axe);
+        la.forEach(l => {
+          const meta = [l.responsable, l.echeance ? "échéance " + dateFr(l.echeance) : "", l.indicateur ? "indicateur de suivi : " + l.indicateur : ""].filter(Boolean);
+          L.push("- " + l.action.trim().replace(/\.$/, "") + (meta.length ? " (" + meta.join(", ") + ")" : "") + ".");
+          if(!compact && l.constat) L.push("  Constat : " + l.constat.split(". ")[0] + ".");
+        });
+      });
+      if(actions.length > liste.length) L.push("", "Les " + (actions.length - liste.length) + " autres actions figurent dans le document de bilan.");
+    }
+    if(sansAction) L.push("", "(" + sansAction + " constat" + (sansAction > 1 ? "s" : "") + " du plan d'action sans action définie : non repris dans ce message.)");
+    const pot = lignesPotentiel(ctx).find(x => x.nom === "Total gain presta");
+    if(pot && pot.val > 0){ L.push(""); L.push("4. Potentiel presta à capter"); L.push("Le tableau Performance chiffre à " + fmt(pot.val, "eur") + " le gain presta atteignable sur l'exercice (synergie, FPPEC, FA)."); }
+    L.push(""); L.push("5. Dispositif de suivi");
+    L.push("- Suivi hebdomadaire de l'OSS : toute période de 4 semaines consécutives à plus de -15 % déclenche une intervention terrain (Collab Réseau, ARE, voire OMM).");
+    L.push("- Vérification des KPI d'obligation à chaque passage en magasin.");
+    if(E.prochainPoint) L.push("- Prochain point de suivi : " + dateFr(E.prochainPoint) + ".");
+    L.push(""); L.push("Nous restons à votre disposition,");
+    return L.join("\n");
+  };
+  let t = construire(false, 99);
+  if(compterMots(t) > MOTS_MAX) t = construire(true, 99);
+  for(let n = E.pa.length; compterMots(t) > MOTS_MAX && n > 3; n--) t = construire(true, n - 1);
+  if(!E.pa.some(l => String(l.action || "").trim())) alert("Aucune action n'est encore rédigée dans le plan d'action : le message ne reprend que les priorités issues du bilan.");
+  E.planMail = t;
+  document.getElementById("textePlan").value = t;
+  majMots(); sauver();
 }
+
+function copier(idTexte, idEtat){
+  const t = document.getElementById(idTexte).value;
+  if(!t) return;
+  const ok = () => { const e = document.getElementById(idEtat); e.textContent = "Copié dans le presse-papiers."; e.className = "etat ok"; };
+  if(navigator.clipboard) navigator.clipboard.writeText(t).then(ok).catch(() => {});
+  else { document.getElementById(idTexte).select(); document.execCommand("copy"); ok(); }
+}
+function copierFDR(){ copier("texteFDR", "motsFDR"); }
 
 /* ===== PDF ===== */
 function chargerScript(url){
@@ -2332,7 +2635,7 @@ async function exporterPDF(){
       titre("OSS et facturé – année fiscale " + E.base.oss.annees[E.base.oss.annees.length-1]);
       comparee(lignes(OSS_LIGNES, c));
       sousTitre("CA facturé par trimestre"); y += 2;
-      table(["Trimestre","N-1","Prév","Réalisé","Écart Prév","Écart N-1","Réseau F N-1","Portefeuille N"],
+      table(["Trimestre","N-1","Prév","Réalisé","Écart Prév","Écart N-1",c.refs[0].nom + " N-1","Portefeuille N"],
         ["T1","T2","T3","T4"].map(q => { const x = c.v.q[q] || {}, r = R.q[q] || {};
           const dN = variation("eur", x.real, Z(x.n1)), dP = variation("eur", x.real, Z(x.prev));
           return [q, fmt(x.n1,"eur"), fmt(x.prev,"eur"), fmt(x.real,"eur"), {t:fmtPct(dP), c:classe(dP, S_VIGIL)}, {t:fmtPct(dN), c:classe(dN, S_VIGIL)},
@@ -2525,7 +2828,7 @@ async function remiseAZero(mode){
 /* ===== démarrage ===== */
 const CHAMPS_LIBRES = [["trimestre","trimestre"],["exercice","exercice"],["groupement","groupement"],["dateBilan","date"],
   ["franchise","franchise"],["participants","participants"],["lectureCR","lectureCR"],
-  ["retourFranchise","retourFranchise"],["prochainPoint","prochainPoint"],["texteFDR","fdr"]];
+  ["retourFranchise","retourFranchise"],["prochainPoint","prochainPoint"],["texteFDR","fdr"],["textePlan","planMail"]];
 function remplirChamps(){
   CHAMPS_LIBRES.forEach(([id, k]) => { if(id !== "groupement") document.getElementById(id).value = E[k] || ""; });
   majMots();
@@ -2552,14 +2855,14 @@ async function demarrer(){
     const el = document.getElementById(id);
     el.addEventListener("change", () => {
       E[k] = el.value;
-      if(k === "groupement"){ E.step2 = false; remplirGroupements(); }
+      if(k === "groupement"){ E.step4 = true; E.step2 = false; remplirGroupements(); }
       if(["trimestre","exercice","groupement"].includes(k)) garderFocusApres(() => { toutCalculer(); rendrePA(); });
-      if(k === "fdr") majMots();
+      if(k === "fdr" || k === "planMail") majMots();
       sauver();
     });
-    if(el.tagName === "TEXTAREA") el.addEventListener("input", () => { E[k] = el.value; if(k === "fdr") majMots(); sauver(); });
+    if(el.tagName === "TEXTAREA") el.addEventListener("input", () => { E[k] = el.value; if(k === "fdr" || k === "planMail") majMots(); sauver(); });
   });
-  document.getElementById("step2").addEventListener("change", e => { E.step2 = e.target.checked; toutCalculer(); sauver(); });
+  ["step4","step2"].forEach(id => document.getElementById(id).addEventListener("change", e => changerPopulation(id, e.target.checked)));
   document.addEventListener("change", e => {
     const el = e.target;
     if(!el.dataset) return;
