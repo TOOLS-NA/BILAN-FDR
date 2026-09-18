@@ -2,7 +2,7 @@
    Stratégie réseau d'abord : l'appli récupère toujours la dernière version
    quand il y a du réseau, et retombe sur le cache sinon.
    Incrémenter CACHE à chaque mise en ligne de index.html. */
-const CACHE = "bfr-v9";
+const CACHE = "bfr-v10";
 const COQUILLE = ["./", "./index.html", "./manifest.json", "./icon.svg"];
 
 self.addEventListener("install", e => {
