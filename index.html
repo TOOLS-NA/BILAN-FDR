@@ -1376,7 +1376,9 @@ function contexteCodes(g, pops){
   const codes = codesDe(g, pops), ref = referentiel();
   const autres = listeGroupements().filter(x => pops.every(p => x[p].length)).map(x => codesDe(x, pops));
   const dans = s => pops.includes(s.statut);
+  const estInt = s => s.statut === "I";
   const nomRes = "Réseau " + libPops(pops);
+  const NOM_INT = "Réseau intégré";
   ctx.codes = codes;
   ctx.libRes = nomRes;
   ctx.nomSite = c => (ref[c] && ref[c].site) || c;
@@ -1390,8 +1392,10 @@ function contexteCodes(g, pops){
     const sitesR = Object.values(b.oss.sites).filter(s => dans(s) && nk(s.cr) !== "hors analyse");
     const tot = pops.map(p => b.oss.totaux[p]).filter(Boolean);
     const vR = tot.length === pops.length ? (tot.length === 1 ? tot[0] : agregatOss(tot)) : agregatOss(sitesR.map(s => s.v));
+    const sitesI = Object.values(b.oss.sites).filter(s => estInt(s) && nk(s.cr) !== "hors analyse");
+    const vI = b.oss.totaux.I || (sitesI.length ? agregatOss(sitesI.map(s => s.v)) : null);
     const c = partie(pris(codes), l => vueOss(agregatOss(l), an),
-      [{nom:nomRes, v:vueOss(vR, an), n:sitesR.length}], pris,
+      [{nom:NOM_INT, v:vI ? vueOss(vI, an) : null, n:sitesI.length}, {nom:nomRes, v:vueOss(vR, an), n:sitesR.length}].filter(r => r.v), pris,
       codes.filter(cd => b.oss.sites[cd]).map(cd => ({code:cd, site:b.oss.sites[cd].site, v:vueOss(b.oss.sites[cd].v, an)})));
     if(c) ctx.oss = c;
   }
@@ -1400,7 +1404,9 @@ function contexteCodes(g, pops){
     const sitesR = Object.values(b.perf.sites).filter(dans);
     const tot = pops.map(p => b.perf.totaux[p]).filter(Boolean);
     const vR = tot.length === pops.length ? (tot.length === 1 ? tot[0] : agregatPerf(tot.map(v => ({v:v})))) : agregatPerf(sitesR);
-    const c = partie(pris(codes), agregatPerf, [{nom:nomRes, v:vR, n:sitesR.length}], pris,
+    const sitesI = Object.values(b.perf.sites).filter(estInt);
+    const vI = b.perf.totaux.I || (sitesI.length ? agregatPerf(sitesI) : null);
+    const c = partie(pris(codes), agregatPerf, [{nom:NOM_INT, v:vI, n:sitesI.length}, {nom:nomRes, v:vR, n:sitesR.length}].filter(r => r.v), pris,
       pris(codes).map(s => ({code:s.code, site:s.site, v:s.v})));
     if(c){ c.reseauSites = sitesR; ctx.perf = c; }
   }
@@ -1412,14 +1418,19 @@ function contexteCodes(g, pops){
     const fN = Object.values(sp.N.sites).filter(dans).map(s => s.code);
     const fN1 = sp.N1 ? Object.values(sp.N1.sites).filter(dans).map(s => s.code) : [];
     const R = {N:agregatPmca(fN.map(c => m(sp.N, c))), N1:sp.N1 ? agregatPmca(fN1.map(c => m(sp.N1, c))) : null};
-    const c = partie(pris(codes), comp, [{nom:nomRes, v:R, n:fN.length}], pris,
+    const iN = Object.values(sp.N.sites).filter(estInt).map(s => s.code);
+    const iN1 = sp.N1 ? Object.values(sp.N1.sites).filter(estInt).map(s => s.code) : [];
+    const RI = iN.length ? {N:agregatPmca(iN.map(c => m(sp.N, c))), N1:sp.N1 ? agregatPmca(iN1.map(c => m(sp.N1, c))) : null} : null;
+    const c = partie(pris(codes), comp, [{nom:NOM_INT, v:RI, n:iN.length}, {nom:nomRes, v:R, n:fN.length}].filter(r => r.v), pris,
       pris(codes).map(cd => ({code:cd, site:sp.N.sites[cd].site, v:comp([cd])})));
     if(c){ c.sp = sp; ctx.pmca = c; }
   }
   if(b.clients){
     const pris = cs => cs.map(c => b.clients.sites[c]).filter(Boolean);
     const sitesR = Object.values(b.clients.sites).filter(dans);
-    const c = sitesR.length ? partie(pris(codes), agregatClients, [{nom:nomRes, v:agregatClients(sitesR), n:sitesR.length}], pris,
+    const sitesI = Object.values(b.clients.sites).filter(estInt);
+    const c = sitesR.length ? partie(pris(codes), agregatClients,
+      [{nom:NOM_INT, v:agregatClients(sitesI), n:sitesI.length}, {nom:nomRes, v:agregatClients(sitesR), n:sitesR.length}].filter(r => r.v), pris,
       pris(codes).map(s => ({code:s.code, site:s.site, v:s.v}))) : null;
     if(c){ c.reseauSites = sitesR; ctx.clients = c; }
   }
@@ -1547,7 +1558,10 @@ function tableDetail(c, colonnes, tri, ctx){
   const rows = lignesD.map(x => [esc(x.site) + repere(x)].concat(colonnes.map(col => col[1](x.v))));
   const classes = lignesD.map(() => "");
   if(c.details.length > 1){ rows.push(["<b>Groupement</b>"].concat(colonnes.map(col => col[1](c.v, true)))); classes.push("total"); }
-  rows.push([c.refs[0].nom + " <span class='second'>moyenne par magasin</span>"].concat(colonnes.map(col => col[1](c.refs[0].v, true, c.refs[0].n)))); classes.push("sec");
+  c.refs.forEach(r => {
+    rows.push([r.nom + " <span class='second'>moyenne par magasin</span>"].concat(colonnes.map(col => col[1](r.v, true, r.n))));
+    classes.push("sec");
+  });
   return tableSimple(ent, rows, classes);
 }
 const cVal = (x, f) => fmt(x, f);
@@ -1699,7 +1713,7 @@ function rendreClients(ctx){
   const c = ctx.clients;
   if(!c){ z.innerHTML = absent("Synthèse client", ctx); return; }
   let h = "<p class='sous'>Groupement " + esc(ctx.g.nom) + " : " + esc(couverture(c, ctx)) + ". Exercice complet" +
-    (E.base.clients.date ? " au " + dateFr(E.base.clients.date) : "") + ", " + minuscule(c.refs[0].nom) + " recalculé sur " + c.refs[0].n + " magasins. La Synthèse client ne couvre pas les STEP 2.</p>";
+    (E.base.clients.date ? " au " + dateFr(E.base.clients.date) : "") + ". Références : " + c.refs.map(r => minuscule(r.nom) + " (" + r.n + " magasins)").join(", ") + ". La Synthèse client ne couvre pas les STEP 2.</p>";
   h += "<h3 class='sousTitre'>Exercice</h3>" + tableComparee(lignes(CLIENTS_LIGNES, c));
   const t = tendanceCA(c);
   h += "<h3 class='sousTitre'>Tendance du CA sur quatre exercices</h3>" + tableSimple(
@@ -1726,18 +1740,21 @@ function tablePopulations(ctx, part, desc){
   if(cols.length < 2) return "";
   cols.push({lib:"Ensemble", c:ctx[part]});
   const ev = cols.map(x => lignes(desc, x.c));
+  const refs = ctx[part].refs;
   let h = "<h3 class='sousTitre'>STEP 4 et STEP 2</h3><div class='enrobe'><table class='tb'><thead><tr><th>Indicateur</th>";
-  cols.forEach(x => h += "<th>" + esc(x.lib) + "</th><th>" + esc(x.c.refs[0].nom) + "</th>");
+  cols.forEach(x => h += "<th>" + esc(x.lib) + "</th>");
+  refs.forEach(r => h += "<th>" + esc(r.nom) + "</th>");
   h += "</tr></thead><tbody>";
   desc.forEach((d, i) => {
     h += "<tr><td>" + esc(d.nom) + "</td>";
     cols.forEach((x, j) => {
-      const o = ev[j][i], r = o.refs[0];
-      if(d.n1 && !d.niveau){
-        h += cellule("<b>" + fmtEvolCell(o) + "</b>", "d " + classeEvol(d, o.dN)) + cellule(r ? fmtVar(d.fmt, r.ev) : "—", "sec");
-      } else {
-        h += cellule("<b>" + fmt(o.real, d.fmt) + "</b>") + cellule(r ? fmt(r.val, d.fmt) : "—", "sec");
-      }
+      const o = ev[j][i];
+      h += (d.n1 && !d.niveau) ? cellule("<b>" + fmtEvolCell(o) + "</b>", "d " + classeEvol(d, o.dN)) : cellule("<b>" + fmt(o.real, d.fmt) + "</b>");
+    });
+    const der = ev[ev.length-1][i];
+    refs.forEach((r, k) => {
+      const x = der.refs[k];
+      h += cellule(x ? ((d.n1 && !d.niveau) ? fmtVar(d.fmt, x.ev) : fmt(x.val, d.fmt)) : "—", "sec");
     });
     h += "</tr>";
   });
