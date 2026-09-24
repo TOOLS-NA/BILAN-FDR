@@ -200,6 +200,7 @@ dialog#dlgRaz::backdrop{background:rgba(14,44,73,.45)}
       <label class="hbtn ghost" title="Reprendre un bilan enregistré">Ouvrir<input type="file" accept=".json" onchange="ouvrir(this)"></label>
       <button class="hbtn ghost" onclick="exportJSON()">Enregistrer</button>
       <button class="hbtn" id="btnPdf" onclick="exporterPDF()">Export PDF</button>
+      <button class="hbtn" id="btnPpt" onclick="exporterPPTX()">Export PPT</button>
       <button class="hbtn ghost" onclick="window.print()">Imprimer</button>
     </div>
     <div class="jauge" title="Avancement du bilan"><i id="jauge"></i></div>
@@ -2543,7 +2544,7 @@ function chargerScript(url){
   return new Promise((ok, ko) => {
     const s = document.createElement("script");
     s.src = url; s.onload = ok;
-    s.onerror = () => ko(new Error("bibliothèque PDF inaccessible, vérifiez la connexion"));
+    s.onerror = () => ko(new Error("bibliothèque inaccessible, vérifiez la connexion"));
     document.head.appendChild(s);
   });
 }
@@ -2747,6 +2748,347 @@ async function exporterPDF(){
     doc.save(nomFichier("pdf"));
   }catch(err){ alert("Export PDF impossible : " + err.message); }
   btn.textContent = avant;
+}
+
+
+/* ===== PowerPoint =====
+   Bibliothèque chargée à la demande, comme pour le PDF. Plusieurs adresses sont
+   essayées : si le premier CDN est injoignable, le suivant prend le relais. */
+const PPTX_URLS = [
+  "https://cdnjs.cloudflare.com/ajax/libs/pptxgenjs/3.12.0/pptxgen.bundle.js",
+  "https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js",
+  "https://unpkg.com/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"
+];
+async function chargerPptx(){
+  if(window.PptxGenJS) return window.PptxGenJS;
+  let derniere = null;
+  for(const url of PPTX_URLS){
+    try{ await chargerScript(url); if(window.PptxGenJS) return window.PptxGenJS; }
+    catch(e){ derniere = e; }
+  }
+  throw derniere || new Error("bibliothèque PowerPoint inaccessible, vérifiez la connexion");
+}
+
+/* palette du deck : bleu et vert pour les séries comparées, violet en troisième,
+   vert et rouge réservés au sens (au-dessus / en dessous de N-1) */
+const PP = {navy:"0E2C49", bleu:"1E73BE", vert:"1C9C73", violet:"7A5BB5", rouge:"C0392B",
+  ambre:"E08A2E", gris:"6B7A88", encre:"16222E", trait:"DCE3EA", grille:"EEF2F6", fond:"F4F6F9", clair:"C6D8EA"};
+const PP_TITRE = "Trebuchet MS", PP_TEXTE = "Calibri";
+const PP_W = 10, PP_H = 5.625, PP_M = 0.45;
+
+/* ===== petites conversions pour les graphiques ===== */
+function ppPct(e){ return (e === null || e === undefined || !isFinite(e)) ? null : Math.round(e*1000)/10; }
+function ppK(v){ return (v === null || v === undefined || !isFinite(v)) ? null : Math.round(v/100)/10; }
+function ppTxt(t){ return String(t === null || t === undefined ? "" : t).replace(/ | | /g, " "); }
+/* un jeu signé devient deux séries empilées : la couleur porte le sens, la légende le nomme */
+function ppSigne(valeurs){
+  return [
+    {name:"Au-dessus de N-1", labels:[], values:valeurs.map(v => (v !== null && v > 0) ? v : null)},
+    {name:"En dessous de N-1", labels:[], values:valeurs.map(v => (v !== null && v <= 0 && v !== 0) ? v : null)}
+  ];
+}
+
+async function exporterPPTX(){
+  const btn = document.getElementById("btnPpt"), avant = btn.textContent;
+  btn.textContent = "…"; btn.disabled = true;
+  try{
+    const ctx = contexte();
+    if(!ctx.g) throw new Error("choisissez d'abord un groupement dans l'en-tête");
+    if(!ctx.oss && !ctx.perf && !ctx.pmca && !ctx.clients) throw new Error("aucun tableau importé ne couvre ce groupement");
+    const Pptx = await chargerPptx();
+    const pptx = new Pptx();
+    pptx.layout = "LAYOUT_16x9";
+    pptx.author = "Narbonne Accessoires";
+    pptx.company = "Narbonne Accessoires";
+    pptx.title = "Bilan " + libT() + " — " + ctx.g.nom;
+
+    const nomRes = ctx.oss ? ctx.oss.refs[0].nom : (ctx.perf ? ctx.perf.refs[0].nom : "Réseau intégré");
+    const pied = "Bilan " + libT() + "  ·  groupement " + ctx.g.nom;
+
+    /* ---- gabarit commun ---- */
+    function page(titre, sousTitre){
+      const s = pptx.addSlide();
+      s.background = {color:"FFFFFF"};
+      s.addShape(pptx.ShapeType.rect, {x:0, y:0, w:PP_W, h:0.78, fill:{color:PP.navy}, line:{type:"none"}});
+      s.addShape(pptx.ShapeType.rect, {x:0, y:0.78, w:PP_W, h:0.05, fill:{color:PP.bleu}, line:{type:"none"}});
+      s.addText(ppTxt(titre), {x:PP_M, y:0.06, w:PP_W-2*PP_M, h:0.42, fontFace:PP_TITRE, fontSize:20, bold:true, color:"FFFFFF", valign:"middle"});
+      if(sousTitre) s.addText(ppTxt(sousTitre), {x:PP_M, y:0.46, w:PP_W-2*PP_M, h:0.28, fontFace:PP_TEXTE, fontSize:11, color:PP.clair, valign:"middle"});
+      s.addText(ppTxt(pied), {x:PP_M, y:PP_H-0.38, w:PP_W-2*PP_M, h:0.24, fontFace:PP_TEXTE, fontSize:9, color:PP.gris});
+      return s;
+    }
+    /* une tuile de chiffre clé */
+    function tuile(s, x, y, w, h, lib, val, sous, couleur){
+      s.addShape(pptx.ShapeType.roundRect, {x:x, y:y, w:w, h:h, fill:{color:PP.fond}, line:{color:PP.trait, width:1}, rectRadius:0.06});
+      s.addText(ppTxt(lib), {x:x+0.12, y:y+0.08, w:w-0.24, h:0.26, fontFace:PP_TEXTE, fontSize:10, color:PP.gris, bold:true});
+      s.addText(ppTxt(val), {x:x+0.12, y:y+0.32, w:w-0.24, h:0.42, fontFace:PP_TITRE, fontSize:20, bold:true, color:couleur || PP.navy});
+      if(sous) s.addText(ppTxt(sous), {x:x+0.12, y:y+0.74, w:w-0.24, h:0.26, fontFace:PP_TEXTE, fontSize:9.5, color:PP.gris});
+    }
+    const coulEvol = e => (e === null || e === undefined) ? PP.navy : (e >= S_VIGIL ? PP.vert : e <= -S_VIGIL ? PP.rouge : PP.navy);
+    /* options communes aux graphiques */
+    function optChart(sup){
+      return Object.assign({
+        barGapWidthPct:55, showLegend:true, legendPos:"b", legendFontFace:PP_TEXTE, legendFontSize:10, legendColor:PP.encre,
+        catAxisLabelFontFace:PP_TEXTE, catAxisLabelFontSize:10, catAxisLabelColor:PP.gris,
+        valAxisLabelFontFace:PP_TEXTE, valAxisLabelFontSize:9, valAxisLabelColor:PP.gris,
+        valGridLine:{color:PP.grille, size:1}, catGridLine:{style:"none"},
+        valAxisLineShow:false, catAxisLineShow:true, catAxisLineColor:PP.trait,
+        dataLabelFontFace:PP_TEXTE, dataLabelFontSize:9, dataLabelColor:PP.encre,
+        border:{pt:0, color:"FFFFFF"}, chartArea:{fill:{color:"FFFFFF"}}
+      }, sup || {});
+    }
+    const FMT_PCT = '+0.0" %";-0.0" %";0" %"';
+    const FMT_KE = '#,##0" k€"';
+
+    /* ===== 1. titre ===== */
+    (function(){
+      const s = pptx.addSlide();
+      s.background = {color:PP.navy};
+      s.addShape(pptx.ShapeType.rect, {x:0, y:2.44, w:PP_W, h:0.05, fill:{color:PP.bleu}, line:{type:"none"}});
+      s.addText("Bilan " + ppTxt(libT()), {x:PP_M, y:1.15, w:PP_W-2*PP_M, h:0.6, fontFace:PP_TITRE, fontSize:34, bold:true, color:"FFFFFF"});
+      s.addText("Groupement " + ppTxt(ctx.g.nom) + "  ·  " + ppTxt(libPops(ctx.pops)),
+        {x:PP_M, y:1.78, w:PP_W-2*PP_M, h:0.45, fontFace:PP_TITRE, fontSize:19, color:PP.clair});
+      s.addText("De la mesure de la performance à la création de valeur",
+        {x:PP_M, y:2.62, w:PP_W-2*PP_M, h:0.36, fontFace:PP_TEXTE, fontSize:14, italic:true, color:"FFFFFF"});
+      const mags = ctx.codes.map(ctx.nomSite).join(" · ");
+      s.addText(ppTxt(ctx.codes.length + " magasin" + (ctx.codes.length > 1 ? "s" : "") + "  —  " + mags),
+        {x:PP_M, y:3.12, w:PP_W-2*PP_M, h:0.9, fontFace:PP_TEXTE, fontSize:10.5, color:PP.clair, valign:"top"});
+      s.addText(ppTxt([E.franchise, E.date ? dateFr(E.date) : ""].filter(Boolean).join("  ·  ")),
+        {x:PP_M, y:PP_H-0.75, w:PP_W-2*PP_M, h:0.3, fontFace:PP_TEXTE, fontSize:11, color:"FFFFFF"});
+    })();
+
+    /* ===== 2. chiffres clés ===== */
+    (function(){
+      const o = ctx.oss, p = ctx.perf, pc = ctx.pmca, cl = ctx.clients;
+      if(!o && !p && !pc && !cl) return;
+      const L = o ? lignes(OSS_LIGNES, o) : [], e = k => { const x = trouver(L, k); return x ? x.dN : null; }, v = k => { const x = trouver(L, k); return x ? x.real : null; };
+      const q = o && o.v.q ? o.v.q[E.trimestre] : null;
+      const dQ = q ? variation("eur", q.real, Z(q.n1)) : null;
+      const tuiles = [];
+      if(q) tuiles.push(["Facturé " + E.trimestre, fmt(q.real,"eur"), fmtPct(dQ) + " sur N-1", coulEvol(dQ)]);
+      if(o) tuiles.push(["Facturé exercice", fmt(v("facture"),"eur"), fmtPct(e("facture")) + " sur N-1", coulEvol(e("facture"))]);
+      if(o) tuiles.push(["OSS création de valeur", fmt(v("oss"),"eur"), fmtPct(e("oss")) + " sur N-1", coulEvol(e("oss"))]);
+      if(o) tuiles.push(["Trafic One-Shot", fmt(v("nbFacOs"),"ent") + " fact.", fmtPct(e("nbFacOs")) + " sur N-1", coulEvol(e("nbFacOs"))]);
+      if(o) tuiles.push(["PM signé", fmt(v("pmSigne"),"eur2"), fmtPct(e("pmSigne")) + " sur N-1", coulEvol(e("pmSigne"))]);
+      if(o) tuiles.push(["Signé / OSS", fmt(v("signeSurOss"),"pct"), fmtPts(e("signeSurOss")) + " sur N-1", coulEvol(e("signeSurOss"))]);
+      if(p && tuiles.length < 6) tuiles.push(["CA accessoires", fmt(p.v.caRea,"eur"), fmtPct(variation("eur", p.v.caRea, Z(p.v.caN1))) + " sur N-1", coulEvol(variation("eur", p.v.caRea, Z(p.v.caN1)))]);
+      if(p && tuiles.length < 6) tuiles.push(["% Marge", fmt(p.v.txMg,"pct"), "réseau " + fmt(p.refs[0].v ? p.refs[0].v.txMg : null,"pct"), PP.navy]);
+      if(p && tuiles.length < 6) tuiles.push(["CA presta", fmt(p.v.prRea,"eur"), fmtPct(variation("eur", p.v.prRea, Z(p.v.prN1))) + " sur N-1", coulEvol(variation("eur", p.v.prRea, Z(p.v.prN1)))]);
+      if(pc){
+        const M = lignes(PMCA_LIGNES, pc), g = k => trouver(M, k);
+        [["pmca","PMCA","eur2"],["nbCli","Nb clients","ent"],["freq","Fréquence d'achat","dec2"],["pmf","PMF","eur2"]].forEach(([k, nom, f]) => {
+          const x = g(k);
+          if(x && x.real !== null && tuiles.length < 6) tuiles.push([nom, fmt(x.real, f), fmtPct(x.dN) + " sur N-1", coulEvol(x.dN)]);
+        });
+      }
+      if(cl && tuiles.length < 6) tuiles.push(["Part de nouveaux clients", fmt(cl.v.ratioNouv,"pct"), "réseau " + fmt(cl.refs[0].v ? cl.refs[0].v.ratioNouv : null,"pct"), PP.navy]);
+      const s = page("Chiffres clés du " + E.trimestre, "Cumul de l'exercice, sauf mention contraire  ·  référence : " + minuscule(nomRes));
+      const l6 = tuiles.slice(0, 6), larg = (PP_W - 2*PP_M - 2*0.2)/3;
+      l6.forEach((t, i) => tuile(s, PP_M + (i%3)*(larg+0.2), 1.15 + Math.floor(i/3)*1.52, larg, 1.34, t[0], t[1], t[2], t[3]));
+      const dec = decomposition(ctx);
+      if(!tuiles.length) return;
+      const phrase = o
+        ? "L'OSS " + (e("oss") === null ? "reste à analyser" : e("oss") < -0.005 ? "recule de " + fmtVarAbs("eur", e("oss")) : e("oss") > 0.005 ? "progresse de " + fmtVarAbs("eur", e("oss")) : "est stable") +
+          " sur N-1, contre " + fmtPct(trouver(L,"oss").refs[0].ev) + " pour le " + minuscule(nomRes) + "."
+        : (dec ? dec.constat.titre + "." : "");
+      if(phrase){
+        s.addShape(pptx.ShapeType.rect, {x:PP_M, y:4.35, w:0.055, h:0.6, fill:{color:PP.bleu}, line:{type:"none"}});
+        s.addText(ppTxt(phrase), {x:PP_M+0.2, y:4.35, w:PP_W-2*PP_M-0.2, h:0.6, fontFace:PP_TEXTE, fontSize:13, color:PP.navy, bold:true, valign:"middle"});
+      }
+    })();
+
+    /* ===== 3. OSS face au réseau intégré ===== */
+    if(ctx.oss){
+      const c = ctx.oss, L = lignes(OSS_LIGNES, c);
+      const cles = [["oss","OSS"],["facture","Facturé"],["nbFacOs","Trafic OS"],["pmOs","PM OS"],["nbSigne","Nb signé"],["pmSigne","PM signé"]];
+      const dispo = cles.filter(k => { const o = trouver(L, k[0]); return o && o.dN !== null; });
+      if(dispo.length >= 3){
+        const s = page("OSS : le groupement face au " + minuscule(nomRes), "Évolution sur N-1, cumul de l'exercice " + (E.base.oss.annees[E.base.oss.annees.length-1] || ""));
+        s.addChart(pptx.ChartType.bar, [
+          {name:"Groupement " + ctx.g.nom, labels:dispo.map(k => k[1]), values:dispo.map(k => ppPct(trouver(L, k[0]).dN))},
+          {name:nomRes, labels:dispo.map(k => k[1]), values:dispo.map(k => ppPct(trouver(L, k[0]).refs[0].ev))}
+        ], optChart({x:0.35, y:1.05, w:PP_W-0.7, h:3.2, barDir:"col", chartColors:[PP.bleu, PP.vert],
+          showValue:true, dataLabelPosition:"outEnd", dataLabelFormatCode:FMT_PCT, valAxisLabelFormatCode:'0" %"'}));
+        const ecarts = dispo.map(k => { const o = trouver(L, k[0]); return {nom:k[1], e:(o.refs[0].ev !== null ? o.dN - o.refs[0].ev : null)}; }).filter(x => x.e !== null);
+        if(ecarts.length){
+          const pire = ecarts.slice().sort((a, b) => a.e - b.e)[0], mieux = ecarts.slice().sort((a, b) => b.e - a.e)[0];
+          s.addText(ppTxt("Écart le plus défavorable : " + pire.nom + " " + fmtPts(pire.e) + ".   Écart le plus favorable : " + mieux.nom + " " + fmtPts(mieux.e) + "."),
+            {x:PP_M, y:4.42, w:PP_W-2*PP_M, h:0.4, fontFace:PP_TEXTE, fontSize:12, color:PP.navy, valign:"middle"});
+        }
+      }
+    }
+
+    /* ===== 4. CA facturé par trimestre ===== */
+    if(ctx.oss && ["T1","T2","T3","T4"].some(q => ctx.oss.v.q[q] && fini(ctx.oss.v.q[q].real) !== null)){
+      const c = ctx.oss, qs = ["T1","T2","T3","T4"];
+      const s = page("CA facturé par trimestre", "Réalisé de l'exercice face à N-1, en milliers d'euros");
+      s.addChart(pptx.ChartType.bar, [
+        {name:"N-1", labels:qs, values:qs.map(q => ppK(c.v.q[q] ? Z(c.v.q[q].n1) : null))},
+        {name:"Réalisé", labels:qs, values:qs.map(q => ppK(c.v.q[q] ? c.v.q[q].real : null))}
+      ], optChart({x:0.35, y:1.05, w:PP_W-0.7, h:2.85, barDir:"col", chartColors:[PP.vert, PP.bleu],
+        showValue:true, dataLabelPosition:"outEnd", dataLabelFormatCode:FMT_KE, valAxisLabelFormatCode:FMT_KE}));
+      const txt = qs.map(q => {
+        const x = c.v.q[q] || {}, d = variation("eur", x.real, Z(x.n1));
+        return q + " " + (d === null ? "—" : fmtPct(d));
+      }).join("     ");
+      s.addText(ppTxt("Évolution sur N-1 :   " + txt), {x:PP_M, y:4.08, w:PP_W-2*PP_M, h:0.35, fontFace:PP_TEXTE, fontSize:12, color:PP.navy, bold:true, valign:"middle"});
+      const q4 = c.v.q[E.trimestre];
+      if(q4 && fini(q4.prev) !== null)
+        s.addText(ppTxt(E.trimestre + " : " + fmt(q4.real,"eur") + " réalisés pour " + fmt(q4.prev,"eur") + " prévus, soit " + fmtPct(variation("eur", q4.real, Z(q4.prev))) + " sur le prévisionnel."),
+          {x:PP_M, y:4.45, w:PP_W-2*PP_M, h:0.35, fontFace:PP_TEXTE, fontSize:11.5, color:PP.gris, valign:"middle"});
+    }
+
+    /* ===== 5. OSS hors salons par quinzaine ===== */
+    if(ctx.oss && E.base.oss.quinzaines && E.base.oss.quinzaines.length >= 4){
+      const c = ctx.oss, labs = E.base.oss.quinzaines;
+      const vals = labs.map(l => ppK(fini(c.v.hsEur[l])));
+      const s = page("OSS hors salons : écart sur N-1, quinzaine par quinzaine", "Chaque barre compare deux semaines à la même période de l'exercice précédent, en milliers d'euros");
+      const series = ppSigne(vals);
+      series.forEach(x => x.labels = labs);
+      s.addChart(pptx.ChartType.bar, series, optChart({x:0.35, y:1.05, w:PP_W-0.7, h:2.95, barDir:"col", barGrouping:"stacked",
+        chartColors:[PP.vert, PP.rouge], barGapWidthPct:35, showValue:false, valAxisLabelFormatCode:FMT_KE, catAxisLabelFontSize:7.5, catAxisLabelRotate:-45}));
+      const pos = vals.filter(v => v !== null && v > 0).length, tot = vals.filter(v => v !== null).length;
+      const cumul = vals.filter(v => v !== null).reduce((a, b) => a + b, 0);
+      const douze = labs.slice(-6), cum12 = douze.reduce((a, l) => a + (fini(c.v.hsEur[l]) || 0), 0);
+      s.addText(ppTxt(pos + " quinzaines sur " + tot + " au-dessus de N-1.   Cumul de l'exercice : " + fmt(cumul*1000, "eur") + ".   12 dernières semaines : " + (cum12 >= 0 ? "+" : "") + fmt(cum12, "eur") + "."),
+        {x:PP_M, y:4.18, w:PP_W-2*PP_M, h:0.45, fontFace:PP_TEXTE, fontSize:12, color:PP.navy, bold:true, valign:"middle"});
+    }
+
+    /* ===== 6. STEP 4 et STEP 2 ===== */
+    if(ctx.parPop && ctx.parPop.filter(p => p.ctx.oss).length === 2){
+      const cles = [["oss","OSS"],["facture","Facturé"],["nbFacOs","Trafic OS"],["nbSigne","Nb signé"],["pmSigne","PM signé"]];
+      const evol = c => { const L = lignes(OSS_LIGNES, c); return cles.map(k => ppPct(trouver(L, k[0]).dN)); };
+      const s = page("STEP 4 et STEP 2", "Évolution sur N-1 de chaque population, face au " + minuscule(nomRes));
+      const series = ctx.parPop.map((p, i) => ({name:p.lib + " (" + p.ctx.oss.n + " mag.)", labels:cles.map(k => k[1]), values:evol(p.ctx.oss)}));
+      series.push({name:"Ensemble", labels:cles.map(k => k[1]), values:evol(ctx.oss)});
+      s.addChart(pptx.ChartType.bar, series, optChart({x:0.35, y:1.05, w:PP_W-0.7, h:3.1, barDir:"col",
+        chartColors:[PP.bleu, PP.vert, PP.violet], showValue:true, dataLabelPosition:"outEnd", dataLabelFontSize:8,
+        dataLabelFormatCode:FMT_PCT, valAxisLabelFormatCode:'0" %"'}));
+      const ligneL = ctx.parPop.map(p => {
+        const L = lignes(OSS_LIGNES, p.ctx.oss), d = trouver(L, "oss").dN;
+        return p.lib + " : OSS " + (d === null ? "—" : fmtPct(d));
+      }).join("     ");
+      s.addText(ppTxt(ligneL), {x:PP_M, y:4.32, w:PP_W-2*PP_M, h:0.38, fontFace:PP_TEXTE, fontSize:12.5, color:PP.navy, bold:true, valign:"middle"});
+    }
+
+    /* ===== 7. performance magasin par magasin ===== */
+    (function(){
+      const c = ctx.oss || ctx.perf;
+      if(!c || c.details.length < 2) return;
+      const mesure = ctx.oss
+        ? x => variation("eur", oy(x,"N","facture"), Z(oy(x,"N1","facture")))
+        : x => variation("eur", x.caRea, Z(x.caN1));
+      let l = c.details.map(x => ({nom:nomCourt(x.site) || x.site, e:mesure(x.v)})).filter(x => x.e !== null)
+        .sort((a, b) => a.e - b.e);
+      if(l.length < 2) return;
+      let note = "";
+      if(l.length > 12){ const n = l.length; l = l.slice(0, 6).concat(l.slice(-6)); note = "  ·  les 6 plus en retrait et les 6 plus en progression sur " + n + " magasins"; }
+      const s = page("Performance magasin par magasin", (ctx.oss ? "Facturé" : "CA accessoires") + ", évolution sur N-1" + note);
+      const series = ppSigne(l.map(x => ppPct(x.e)));
+      series.forEach(x => x.labels = l.map(y => y.nom));
+      s.addChart(pptx.ChartType.bar, series, optChart({x:0.35, y:1.05, w:PP_W-0.7, h:3.5, barDir:"bar", barGrouping:"stacked",
+        chartColors:[PP.vert, PP.rouge], barGapWidthPct:40, showValue:true, dataLabelFormatCode:FMT_PCT,
+        dataLabelFontSize:9, catAxisLabelFontSize:9, catAxisLabelPos:"low", valAxisLabelFormatCode:'0" %"'}));
+      const bas = l.filter(x => x.e <= -0.10);
+      if(bas.length) s.addText(ppTxt(bas.length + " magasin" + (bas.length > 1 ? "s" : "") + " en retrait de plus de 10 % : " + bas.map(x => x.nom).join(", ") + "."),
+        {x:PP_M, y:4.63, w:PP_W-2*PP_M, h:0.35, fontFace:PP_TEXTE, fontSize:11, color:PP.rouge, bold:true, valign:"middle"});
+    })();
+
+    /* ===== 8. dispositif de réaction rapide ===== */
+    if(ctx.oss){
+      const inter = magasinsIntervention(ctx, E.trimestre);
+      const s = page("Dispositif de réaction rapide", "4 semaines consécutives à -15 % ou moins sur l'OSS hors salons — " + E.trimestre);
+      s.addText([
+        {text:"Le seuil déclenche une intervention terrain", options:{bold:true}},
+        {text:" mobilisant le Collab Réseau, l'ARE, voire l'OMM : vérifier le respect des KPI, analyser les causes de la baisse, remettre le magasin dans une dynamique positive."}
+      ], {x:PP_M, y:1.02, w:PP_W-2*PP_M, h:0.5, fontFace:PP_TEXTE, fontSize:12, color:PP.encre, valign:"top"});
+      if(inter.length){
+        const rows = [[
+          {text:"Magasin", options:{bold:true, color:"FFFFFF", fill:{color:PP.navy}}},
+          {text:"Population", options:{bold:true, color:"FFFFFF", fill:{color:PP.navy}}},
+          {text:"Périodes concernées", options:{bold:true, color:"FFFFFF", fill:{color:PP.navy}}}
+        ]].concat(inter.slice(0, 9).map(x => [
+          {text:ppTxt(x.site), options:{bold:true, color:PP.navy}},
+          {text:ppTxt(LIB_POP[x.statut] || ""), options:{color:PP.gris}},
+          {text:ppTxt(x.periodes.join("  ·  ")), options:{color:PP.encre, fontSize:9.5}}
+        ]));
+        s.addTable(rows, {x:PP_M, y:1.62, w:PP_W-2*PP_M, colW:[2.1, 1.1, PP_W-2*PP_M-3.2],
+          fontFace:PP_TEXTE, fontSize:10.5, border:{type:"solid", color:PP.trait, pt:0.5}, valign:"middle", rowH:0.32, autoPage:false});
+        if(inter.length > 9) s.addText(ppTxt("et " + (inter.length - 9) + " autre(s) magasin(s)."), {x:PP_M, y:PP_H-0.72, w:PP_W-2*PP_M, h:0.28, fontFace:PP_TEXTE, fontSize:10, color:PP.gris});
+      } else {
+        s.addShape(pptx.ShapeType.roundRect, {x:PP_M, y:1.9, w:PP_W-2*PP_M, h:1.1, fill:{color:"F4FBF8"}, line:{color:PP.vert, width:1}, rectRadius:0.08});
+        s.addText("Aucun magasin du groupement n'a atteint le seuil sur le " + E.trimestre + ".",
+          {x:PP_M+0.25, y:1.9, w:PP_W-2*PP_M-0.5, h:1.1, fontFace:PP_TITRE, fontSize:15, bold:true, color:PP.vert, valign:"middle"});
+      }
+    }
+
+    /* ===== 9. accessoires, prestation et clients ===== */
+    (function(){
+      const p = ctx.perf, pc = ctx.pmca;
+      if(!p && !pc) return;
+      const lignesG = [];
+      if(p){
+        const A = lignes(PERF_ACC, p), PR = lignes(PERF_PRESTA, p);
+        [["caAcc","CA accessoires",A],["fac","Nb factures",A],["pmf","PMF",A],["presta","CA presta",PR]].forEach(([k, nom, src]) => {
+          const o = trouver(src, k);
+          if(o && o.dN !== null) lignesG.push({nom:nom, mag:o.dN, res:o.refs[0] ? o.refs[0].ev : null});
+        });
+      }
+      if(pc){
+        const M = lignes(PMCA_LIGNES, pc);
+        [["pmca","PMCA"],["nbCli","Nb clients"]].forEach(([k, nom]) => {
+          const o = trouver(M, k);
+          if(o && o.dN !== null) lignesG.push({nom:nom, mag:o.dN, res:o.refs[0] ? o.refs[0].ev : null});
+        });
+      }
+      if(lignesG.length < 2) return;
+      const s = page("Accessoires, prestation et clients", "Évolution sur N-1, face au " + minuscule(nomRes));
+      s.addChart(pptx.ChartType.bar, [
+        {name:"Groupement " + ctx.g.nom, labels:lignesG.map(x => x.nom), values:lignesG.map(x => ppPct(x.mag))},
+        {name:nomRes, labels:lignesG.map(x => x.nom), values:lignesG.map(x => ppPct(x.res))}
+      ], optChart({x:0.35, y:1.05, w:PP_W-0.7, h:2.9, barDir:"col", chartColors:[PP.bleu, PP.vert],
+        showValue:true, dataLabelPosition:"outEnd", dataLabelFormatCode:FMT_PCT, valAxisLabelFormatCode:'0" %"'}));
+      const bas = [];
+      if(p) bas.push("% Marge " + fmt(p.v.txMg,"pct") + " (réseau " + fmt(p.refs[0].v ? p.refs[0].v.txMg : null,"pct") + ")");
+      if(p) bas.push("% Synergie " + fmt(p.v.syn,"pct") + " (réseau " + fmt(p.refs[0].v ? p.refs[0].v.syn : null,"pct") + ")");
+      const pot = lignesPotentiel(ctx).find(x => x.nom === "Total gain presta");
+      if(pot && pot.val > 0) bas.push("potentiel presta " + fmt(pot.val,"eur"));
+      if(bas.length) s.addText(ppTxt(bas.join("     ")), {x:PP_M, y:4.12, w:PP_W-2*PP_M, h:0.4, fontFace:PP_TEXTE, fontSize:12, color:PP.navy, bold:true, valign:"middle"});
+      const dec = decomposition(ctx);
+      if(dec) s.addText(ppTxt(dec.constat.titre + ". " + dec.constat.detail),
+        {x:PP_M, y:4.5, w:PP_W-2*PP_M, h:0.55, fontFace:PP_TEXTE, fontSize:10.5, color:PP.gris, valign:"top"});
+    })();
+
+    /* ===== 10. enseignements et priorités ===== */
+    (function(){
+      const tous = tousConstats(ctx);
+      const forts = tous.filter(x => x.niveau === "favorable").slice(0, 5);
+      const vigil = tous.filter(x => x.niveau === "alerte").concat(tous.filter(x => x.niveau === "vigilance")).slice(0, 5);
+      const s = page("Enseignements et priorités", "Feuille de route " + libTs());
+      const larg = (PP_W - 2*PP_M - 0.25)/2;
+      const colonne = (x, titre, couleur, items, vide) => {
+        s.addShape(pptx.ShapeType.rect, {x:x, y:1.02, w:larg, h:0.34, fill:{color:couleur}, line:{type:"none"}});
+        s.addText(ppTxt(titre), {x:x+0.14, y:1.02, w:larg-0.28, h:0.34, fontFace:PP_TITRE, fontSize:12, bold:true, color:"FFFFFF", valign:"middle"});
+        s.addText(items.length ? items.map(t => ({text:ppTxt(t), options:{bullet:{code:"2022"}, breakLine:true}})) : [{text:vide, options:{italic:true, color:PP.gris}}],
+          {x:x+0.06, y:1.46, w:larg-0.12, h:2.1, fontFace:PP_TEXTE, fontSize:10.5, color:PP.encre, valign:"top", lineSpacingMultiple:1.15});
+      };
+      colonne(PP_M, "Points forts", PP.vert, forts.map(x => x.titre), "Aucun point fort identifié.");
+      colonne(PP_M + larg + 0.25, "Points de vigilance", PP.rouge, vigil.map(x => x.titre), "Aucun point de vigilance.");
+      const actions = E.pa.filter(l => String(l.action || "").trim())
+        .sort((a, b) => (a.priorite || "9").localeCompare(b.priorite || "9")).slice(0, 3);
+      s.addShape(pptx.ShapeType.rect, {x:PP_M, y:3.68, w:PP_W-2*PP_M, h:0.34, fill:{color:PP.navy}, line:{type:"none"}});
+      s.addText("Nos priorités pour le " + ppTxt(libTs()), {x:PP_M+0.14, y:3.68, w:PP_W-2*PP_M-0.28, h:0.34, fontFace:PP_TITRE, fontSize:12, bold:true, color:"FFFFFF", valign:"middle"});
+      s.addText(actions.length
+        ? actions.map((l, i) => ({text:ppTxt((i+1) + ". [" + l.axe + "] " + l.action.trim().replace(/\.$/, "") +
+            (l.echeance ? "  —  échéance " + dateFr(l.echeance) : "")), options:{breakLine:true}}))
+        : [{text:"Plan d'action à compléter dans l'application.", options:{italic:true, color:PP.gris}}],
+        {x:PP_M+0.06, y:4.1, w:PP_W-2*PP_M-0.12, h:1.0, fontFace:PP_TEXTE, fontSize:11, color:PP.encre, valign:"top", lineSpacingMultiple:1.2});
+    })();
+
+    await pptx.writeFile({fileName:nomFichier("pptx")});
+  }catch(err){
+    alert("Export PowerPoint impossible : " + err.message);
+  }
+  btn.textContent = avant; btn.disabled = false;
 }
 
 /* ===== enregistrement ===== */
