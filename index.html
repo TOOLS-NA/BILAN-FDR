@@ -212,12 +212,12 @@ dialog#dlgRaz::backdrop{background:rgba(14,44,73,.45)}
 <!-- CADRE -->
 <section class="pilote">
   <h2>Cadre du bilan
-    <label class="imp" style="margin-left:auto" title="Evol OSS Facturé, Performance CA version Pabad, PMCA 12 mois glissants, Synthèse client. Tous d'un coup ou séparément.">Importer les tableaux
-      <input type="file" accept=".xlsx,.xlsm" multiple onchange="importer(this,'cadre')">
+    <label class="imp" style="margin-left:auto" title="Evol OSS Facturé, Performance CA version Pabad, PMCA 12 mois glissants, Synthèse client, ClassementPodium (PDF). Tous d'un coup ou séparément.">Importer les tableaux
+      <input type="file" accept=".xlsx,.xlsm,.pdf" multiple onchange="importer(this,'cadre')">
     </label>
   </h2>
   <p class="sous" id="sousCadre"></p>
-  <p class="etat sousimp" id="etat_cadre">Importez les tableaux réseau (Evol OSS Facturé, Performance, PMCA, Synthèse client), puis choisissez le groupement dans l'en-tête. Chaque tableau est reconnu automatiquement.</p>
+  <p class="etat sousimp" id="etat_cadre">Importez les tableaux réseau (Evol OSS Facturé, Performance, PMCA, Synthèse client, ClassementPodium en PDF), puis choisissez le groupement dans l'en-tête. Chaque fichier est reconnu automatiquement.</p>
   <div class="duo">
     <div><label class="champ" for="franchise">Dirigeant du groupement</label><input type="text" id="franchise"></div>
     <div><label class="champ" for="participants">Participants au point</label><input type="text" id="participants"></div>
@@ -229,7 +229,7 @@ dialog#dlgRaz::backdrop{background:rgba(14,44,73,.45)}
 <section>
   <h2>OSS et facturé
     <label class="imp" style="margin-left:auto" title="Evol OSS Facturé INT FRA et STEP2 (.xlsx).">Import
-      <input type="file" accept=".xlsx,.xlsm" multiple onchange="importer(this,'oss')">
+      <input type="file" accept=".xlsx,.xlsm,.pdf" multiple onchange="importer(this,'oss')">
     </label>
   </h2>
   <p class="etat sousimp" id="etat_oss"></p>
@@ -242,7 +242,7 @@ dialog#dlgRaz::backdrop{background:rgba(14,44,73,.45)}
 <section>
   <h2>Perfs ACC et Presta
     <label class="imp" style="margin-left:auto" title="Performance CA version Pabad (.xlsm).">Import
-      <input type="file" accept=".xlsx,.xlsm" multiple onchange="importer(this,'perf')">
+      <input type="file" accept=".xlsx,.xlsm,.pdf" multiple onchange="importer(this,'perf')">
     </label>
   </h2>
   <p class="etat sousimp" id="etat_perf"></p>
@@ -255,7 +255,7 @@ dialog#dlgRaz::backdrop{background:rgba(14,44,73,.45)}
 <section>
   <h2>PMCA
     <label class="imp" style="margin-left:auto" title="PMCA 12 mois glissants, onglets N et N-1.">Import
-      <input type="file" accept=".xlsx,.xlsm" multiple onchange="importer(this,'pmca')">
+      <input type="file" accept=".xlsx,.xlsm,.pdf" multiple onchange="importer(this,'pmca')">
     </label>
   </h2>
   <p class="etat sousimp" id="etat_pmca"></p>
@@ -268,13 +268,26 @@ dialog#dlgRaz::backdrop{background:rgba(14,44,73,.45)}
 <section>
   <h2>Synthèse client
     <label class="imp" style="margin-left:auto" title="Synthèse client de fin d'exercice.">Import
-      <input type="file" accept=".xlsx,.xlsm" multiple onchange="importer(this,'clients')">
+      <input type="file" accept=".xlsx,.xlsm,.pdf" multiple onchange="importer(this,'clients')">
     </label>
   </h2>
   <p class="etat sousimp" id="etat_clients"></p>
   <div id="corps_clients"></div>
   <h3 class="sousTitre">Lecture</h3>
   <div id="lecture_clients"></div>
+</section>
+
+<!-- 5. PODIUM -->
+<section>
+  <h2>Podium
+    <label class="imp" style="margin-left:auto" title="ClassementPodium au format PDF.">Import
+      <input type="file" accept=".xlsx,.xlsm,.pdf" multiple onchange="importer(this,'podium')">
+    </label>
+  </h2>
+  <p class="etat sousimp" id="etat_podium"></p>
+  <div id="corps_podium"></div>
+  <h3 class="sousTitre">Lecture</h3>
+  <div id="lecture_podium"></div>
 </section>
 
 <!-- LECTURE CROISÉE -->
@@ -389,10 +402,11 @@ const JSPDF_URL = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.
 const AUTOTABLE_URL = "https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js";
 
 /* ===== état ===== */
+function baseVide(){ return {oss:null, perf:null, pmca:null, clients:null, podium:null}; }
 function etatVide(){
   return {
     schema:SCHEMA, trimestre:"T4", exercice:"", groupement:"", step4:true, step2:false, date:"", franchise:"", participants:"",
-    base:{oss:null, perf:null, pmca:null, clients:null},
+    base:baseVide(),
     lectureCR:"", retourFranchise:"", objectifs:{}, pa:[], prochainPoint:"", fdr:"", planMail:""
   };
 }
@@ -1044,7 +1058,87 @@ function lireOss(feuilles, fichier){
       });
     }
   }
-  return Object.keys(b.sites).length ? b : null;
+  if(!Object.keys(b.sites).length) return null;
+  lireOssSalons(feuilles, b);
+  return b;
+}
+
+/* --- OSS avec salons : onglet « Synthèse OSS », semaine par semaine ---
+   Le reste du fichier ne donne l'écart par quinzaine que hors salons. Cet onglet
+   porte l'OSS salons compris ; les semaines y sont regroupées deux par deux à partir
+   de la semaine 36, début de l'exercice, pour retrouver les mêmes quinzaines. */
+const FEUILLE_OSS_SALONS = "synthese oss";
+const SEMAINES_EXERCICE = 52;
+function quinzaineDeSemaine(w){
+  const i = (((w - 36) % SEMAINES_EXERCICE) + SEMAINES_EXERCICE) % SEMAINES_EXERCICE;
+  const p = Math.floor(i / 2) * 2;
+  return "S" + (((p + 35) % SEMAINES_EXERCICE) + 1) + "-S" + (((p + 36) % SEMAINES_EXERCICE) + 1);
+}
+function sommeSalons(liste, annees){
+  const o = {};
+  (annees || []).forEach(a => {
+    o[a] = {};
+    liste.forEach(x => Object.keys(x[a] || {}).forEach(lab => { o[a][lab] = (o[a][lab] || 0) + x[a][lab]; }));
+  });
+  return o;
+}
+function lireOssSalons(feuilles, b){
+  const fe = feuilles.find(x => nk(x.nom) === FEUILLE_OSS_SALONS);
+  if(!fe) return;
+  const t = fe.table;
+  let h = -1;
+  for(let i = 0; i < Math.min(t.length, 20); i++){
+    const n = (t[i] || []).map(nk);
+    if(n.includes("dimsitecodenom") && n.includes("groupement")){ h = i; break; }
+  }
+  if(h < 0) return;
+  const iSite = t[h].map(nk).indexOf("dimsitecodenom");
+  if(iSite < 0) return;
+  // seules les colonnes dont l'entête est un simple numéro de semaine portent des valeurs :
+  // les blocs d'écart qui suivent sont libellés « 36 - 36 » et restent de côté
+  const sem = [];
+  for(let c = iSite + 1; c < t[h].length; c++){
+    const v = String(t[h][c] === null || t[h][c] === undefined ? "" : t[h][c]).trim();
+    if(/^\d{1,2}$/.test(v)) sem.push({c:c, w:parseInt(v, 10)});
+  }
+  const nbEx = Math.floor(sem.length / SEMAINES_EXERCICE);
+  if(nbEx < 1) return;
+  const annees = b.annees.slice(-nbEx);
+  if(annees.length < nbEx) return;
+  const labels = [], derniere = annees[annees.length-1];
+  const cols = sem.slice(0, nbEx * SEMAINES_EXERCICE).map((x, i) => {
+    const lab = quinzaineDeSemaine(x.w), an = annees[Math.floor(i / SEMAINES_EXERCICE)];
+    if(an === derniere && labels.indexOf(lab) < 0) labels.push(lab);
+    return {c:x.c, an:an, lab:lab};
+  });
+  const lire = r => {
+    const o = {};
+    annees.forEach(a => o[a] = {});
+    cols.forEach(x => {
+      const v = nombre(r[x.c]);
+      if(v === null) return;
+      o[x.an][x.lab] = (o[x.an][x.lab] || 0) + v;
+    });
+    return o;
+  };
+  b.quinzainesSalons = labels;
+  b.anneesSalons = annees;
+  t.slice(h + 1).forEach(r => {
+    if(!r || !r.length) return;
+    const cd = codeSite(String(r[iSite] || "").trim());
+    if(!cd || !b.sites[cd] || b.sites[cd].v.salons) return;
+    b.sites[cd].v.salons = lire(r);
+  });
+  // cet onglet ne porte pas de ligne « Total » exploitable : les totaux réseau sont recomposés
+  const parStatut = {};
+  Object.values(b.sites).forEach(x => {
+    if(!x.v.salons || nk(x.cr) === "hors analyse") return;
+    (parStatut[x.statut] = parStatut[x.statut] || []).push(x.v.salons);
+    (parStatut.TOUT = parStatut.TOUT || []).push(x.v.salons);
+  });
+  Object.keys(parStatut).forEach(st => {
+    if(b.totaux[st]) b.totaux[st].salons = sommeSalons(parStatut[st], annees);
+  });
 }
 
 /* agrégat OSS : sommes par année, ratios recalculés, trimestres et quinzaines additionnés */
@@ -1072,6 +1166,8 @@ function agregatOss(liste){
     const base = somme(liste.map(s => (fini(s.hsPct[lab]) && s.hsPct[lab] !== 0 && fini(s.hsEur[lab]) !== null) ? s.hsEur[lab] / s.hsPct[lab] : null));
     v.hsEur[lab] = eur; v.hsPct[lab] = liste.length === 1 ? liste[0].hsPct[lab] : div(eur, base);
   });
+  const avec = liste.filter(s => s.salons);
+  if(avec.length) v.salons = sommeSalons(avec.map(s => s.salons), Object.keys(avec[0].salons));
   return v;
 }
 
@@ -1096,12 +1192,126 @@ function agregatPmca(liste){
   return out;
 }
 
+/* ===== podium accessoires et prestation (PDF ClassementPodium) =====
+   Le classement est imprimé en paysage : chaque collaborateur occupe une colonne
+   et chaque ligne du tableau une bande horizontale. On relit donc le PDF par
+   coordonnées plutôt que par blocs de texte, que la mise en page tronque. */
+const PDFJS_URLS = [
+  ["https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js", "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"],
+  ["https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.min.js", "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.worker.min.js"],
+  ["https://unpkg.com/pdfjs-dist@3.11.174/legacy/build/pdf.min.js", "https://unpkg.com/pdfjs-dist@3.11.174/legacy/build/pdf.worker.min.js"]
+];
+async function chargerPdfJs(){
+  if(window.pdfjsLib) return window.pdfjsLib;
+  let derniere = null;
+  for(const [lib, worker] of PDFJS_URLS){
+    try{
+      await chargerScript(lib);
+      if(window.pdfjsLib){ window.pdfjsLib.GlobalWorkerOptions.workerSrc = worker; return window.pdfjsLib; }
+    }catch(e){ derniere = e; }
+  }
+  throw derniere || new Error("bibliothèque PDF inaccessible, vérifiez la connexion");
+}
+/* ordre de lecture des bandes, du haut vers le bas de la page */
+const PODIUM_BANDES = ["totN1","prev","tot","rgTot","refT","rgRefT","amenagement","rgAmenagement",
+  "tenteToit","rgTenteToit","intOut","rgIntOut","mobilite","rgMobilite","hightech","rgHightech",
+  "thermique","rgThermique","stabilisation","rgStabilisation","energie","rgEnergie"];
+const PODIUM_FAMILLES = [
+  {k:"energie",       nom:"Énergie",       prio:true},
+  {k:"stabilisation", nom:"Stabilisation", prio:true},
+  {k:"thermique",     nom:"Thermique",     prio:true},
+  {k:"hightech",      nom:"High-Tech",     prio:true},
+  {k:"mobilite",      nom:"Mobilité",      prio:true},
+  {k:"intOut",        nom:"Int/Out hors tente-toit"},
+  {k:"tenteToit",     nom:"Tente et toit"},
+  {k:"amenagement",   nom:"Aménagement"},
+  {k:"refT",          nom:"Ref T"}
+];
+const PODIUM_PRIO = PODIUM_FAMILLES.filter(f => f.prio);
+function pdBandes(vals, ecart){
+  const tri = vals.slice().sort((a, b) => b - a), out = [];
+  let cur = [];
+  tri.forEach(v => { if(cur.length && cur[cur.length-1] - v > ecart){ out.push(cur); cur = []; } cur.push(v); });
+  if(cur.length) out.push(cur);
+  return out.map(g => (Math.max.apply(null, g) + Math.min.apply(null, g)) / 2);
+}
+function pdNombre(t){ const v = parseFloat(String(t).replace(/[^\d,.\-]/g, "").replace(",", ".")); return isFinite(v) ? v : null; }
+
+async function lirePodium(fichier){
+  const pdfjs = await chargerPdfJs();
+  const doc = await pdfjs.getDocument({data:new Uint8Array(await fichier.arrayBuffer())}).promise;
+  const b = {type:"podium", fichier:fichier.name, date:"", tables:[]};
+  let courant = null;
+  for(let p = 1; p <= doc.numPages; p++){
+    const page = await doc.getPage(p);
+    const tc = await page.getTextContent();
+    const items = tc.items.filter(i => String(i.str).trim())
+      .map(i => ({s:String(i.str).trim(), x:Math.round(i.transform[4]*10)/10, y:Math.round(i.transform[5]*10)/10}));
+    const titre = (items.find(i => /TAC Podium/i.test(i.s)) || {}).s || "";
+    if(titre){ courant = {nature: /Presta/i.test(titre) ? "presta" : "acc", titre:titre, lignes:[]}; b.tables.push(courant); }
+    if(!courant) continue;
+    const ancre = items.find(i => i.s === "Collab");
+    if(!ancre) continue;
+    const entetes = items.filter(i => Math.abs(i.y - ancre.y) <= 6 && i.x > ancre.x + 2);
+    const colonnes = pdBandes(entetes.map(i => i.x), 4).sort((a, c) => a - c);
+    if(!colonnes.length) continue;
+    const data = items.filter(i => i.x >= colonnes[0] - 4 && i.y > ancre.y + 10);
+    const bs = pdBandes(data.map(i => i.y), 12);
+    if(bs.length < PODIUM_BANDES.length + 1) continue;
+    const bSite = bs[PODIUM_BANDES.length];
+    colonnes.forEach(cx => {
+      const dedans = i => Math.abs(i.x - cx) <= 4;
+      const cell = data.filter(dedans);
+      let nom = entetes.filter(dedans).map(i => i.s).join(" ");
+      const l = {};
+      PODIUM_BANDES.forEach((k, i) => {
+        const it = cell.find(c => Math.abs(c.y - bs[i]) <= 11);
+        l[k] = it ? pdNombre(it.s) : null;
+      });
+      const its = cell.find(c => Math.abs(c.y - bSite) <= 11);
+      l.site = its ? String(its.s).trim().toUpperCase() : "";
+      cell.filter(c => c.y < bSite - 11).forEach(c => { nom += " " + c.s; });
+      const m = /^([0-9A-Z]{2,8})-\s*(.*)$/.exec(nom);
+      l.code = m ? m[1] : nom;
+      l.nom = m ? (m[2] || m[1]) : nom;
+      if(l.tot !== null || l.totN1 !== null) courant.lignes.push(l);
+    });
+  }
+  b.tables = b.tables.filter(t => t.lignes.length);
+  return b.tables.length ? b : null;
+}
+/* somme d'un ensemble de collaborateurs : les valeurs du podium sont en milliers d'euros */
+function agregatPodium(lignes){
+  if(!lignes.length) return null;
+  const o = {n:lignes.length, tot:0, totN1:0, prev:0, prio:0};
+  PODIUM_FAMILLES.forEach(f => o[f.k] = 0);
+  lignes.forEach(l => {
+    ["tot","totN1","prev"].forEach(k => o[k] += (fini(l[k]) || 0));
+    PODIUM_FAMILLES.forEach(f => o[f.k] += (fini(l[f.k]) || 0));
+  });
+  PODIUM_PRIO.forEach(f => o.prio += o[f.k]);
+  o.partPrio = div(o.prio, o.tot);
+  o.parTete = div(o.tot, o.n);
+  return o;
+}
+/* potentiel : ce que le groupement ferait sur les familles prioritaires
+   au niveau de vente par collaborateur du réseau intégré */
+function potentielPodium(soi, ref){
+  if(!soi || !ref || !soi.n || !ref.n) return null;
+  const l = PODIUM_PRIO.map(f => {
+    const a = div(soi[f.k], soi.n), b = div(ref[f.k], ref.n);
+    const ecart = (a !== null && b !== null) ? b - a : null;
+    return {nom:f.nom, soi:a, ref:b, ecart:ecart, gain: (ecart !== null && ecart > 0) ? ecart * soi.n : 0};
+  });
+  return {lignes:l, total:l.reduce((a, x) => a + x.gain, 0)};
+}
+
 /* ===== import ===== */
 async function feuillesDuFichier(f){
   const cl = await ouvrirClasseur(f);
   const estOss = cl.feuilles.some(x => nk(x.nom) === FEUILLE_OSS);
   // le fichier OSS pèse plusieurs centaines de Mo décompressé : on ne lit que la synthèse et l'index
-  const cibles = estOss ? cl.feuilles.filter(x => [FEUILLE_OSS, "index"].includes(nk(x.nom))) : cl.feuilles.filter(x => !x.cachee);
+  const cibles = estOss ? cl.feuilles.filter(x => [FEUILLE_OSS, FEUILLE_OSS_SALONS, "index"].includes(nk(x.nom))) : cl.feuilles.filter(x => !x.cachee);
   const out = [];
   for(const fe of cibles) out.push({nom:fe.nom, cachee:fe.cachee, table: await cl.lire(fe.nom)});
   return out;
@@ -1117,6 +1327,16 @@ async function importer(input, zone){
   let ok = 0;
   for(const f of fichiers){
     try{
+      if(/\.pdf$/i.test(f.name)){
+        const pod = await lirePodium(f);
+        if(pod){
+          E.base.podium = pod; ok++;
+          const m = f.name + " : podium — " + pod.tables.map(t => (t.nature === "presta" ? "prestation" : "accessoires") + " (" + t.lignes.length + " collaborateurs)").join(", ");
+          msg.push(m);
+          const e = document.getElementById("etat_podium"); if(e){ e.className = "etat sousimp"; e.textContent = m; }
+        } else msg.push(f.name + " : PDF non reconnu (attendu : ClassementPodium)");
+        continue;
+      }
       const feuilles = await feuillesDuFichier(f);
       const oss = lireOss(feuilles, f.name);
       const perf = oss ? null : lirePerf(feuilles, f.name);
@@ -1142,7 +1362,7 @@ async function importer(input, zone){
         E.base.clients = cli; ok++; cible = "clients";
         m = f.name + " : Synthèse client" + (cli.date ? " au " + dateFr(cli.date) : "") + ", " + Object.keys(cli.sites).length + " sites";
       } else {
-        m = f.name + " : tableau non reconnu (attendu : Evol OSS Facturé, Performance CA, PMCA 12 mois glissants ou Synthèse client)";
+        m = f.name + " : tableau non reconnu (attendu : Evol OSS Facturé, Performance CA, PMCA 12 mois glissants, Synthèse client ou ClassementPodium en PDF)";
       }
       msg.push(m);
       if(cible){ const e = document.getElementById("etat_" + cible); if(e){ e.className = "etat sousimp"; e.textContent = m; } }
@@ -1166,6 +1386,7 @@ function messageSources(){
   if(b.perf) out.push("Performance " + (b.perf.trimestre || "") + " " + (b.perf.exercice || ""));
   if(b.pmca) out.push("PMCA " + Object.keys(b.pmca.saisons).sort().join(" / "));
   if(b.clients) out.push("Synthèse client" + (b.clients.date ? " au " + dateFr(b.clients.date) : ""));
+  if(b.podium) out.push("Podium (" + b.podium.tables.map(t => t.nature === "presta" ? "presta" : "acc").join(" + ") + ")");
   return out.length ? "En place : " + out.join(", ") + "." : "Aucun tableau importé.";
 }
 
@@ -1346,7 +1567,26 @@ const OSS_LIGNES = [
 function vueOss(v, annees){
   if(!v) return null;
   const aN = annees[annees.length-1], aN1 = annees.length > 1 ? annees[annees.length-2] : null;
-  return {N:v.an[aN] || null, N1:aN1 ? v.an[aN1] || null : null, q:v.q, hsPct:v.hsPct, hsEur:v.hsEur, cum:v.cum};
+  const sa = v.salons || null;
+  return {N:v.an[aN] || null, N1:aN1 ? v.an[aN1] || null : null, q:v.q, hsPct:v.hsPct, hsEur:v.hsEur, cum:v.cum,
+    salN: sa ? sa[aN] || null : null, salN1: (sa && aN1) ? sa[aN1] || null : null};
+}
+/* écart d'une quinzaine, salons compris */
+function ossSalons(v, lab){
+  if(!v || !v.salN || !v.salN1) return {eur:null, pct:null};
+  const a = fini(v.salN1[lab]), b = fini(v.salN[lab]);
+  if(a === null && b === null) return {eur:null, pct:null};
+  const eur = (b || 0) - (a || 0);
+  return {eur:eur, pct: a ? eur / a : null};
+}
+function quinzainesAffichees(){
+  const b = E.base.oss;
+  if(!b) return {labs:[], salons:false};
+  return (b.quinzainesSalons && b.quinzainesSalons.length)
+    ? {labs:b.quinzainesSalons, salons:true} : {labs:b.quinzaines || [], salons:false};
+}
+function ecartQuinzaine(v, lab, salons){
+  return salons ? ossSalons(v, lab) : {eur:fini(v.hsEur[lab]), pct:fini(v.hsPct[lab])};
 }
 
 /* ===== contexte du groupement choisi ===== */
@@ -1434,6 +1674,25 @@ function contexteCodes(g, pops){
       [{nom:NOM_INT, v:agregatClients(sitesI), n:sitesI.length}, {nom:nomRes, v:agregatClients(sitesR), n:sitesR.length}].filter(r => r.v), pris,
       pris(codes).map(s => ({code:s.code, site:s.site, v:s.v}))) : null;
     if(c){ c.reseauSites = sitesR; ctx.clients = c; }
+  }
+  if(b.podium){
+    const st = c => (ref[c] && ref[c].statut) || "";
+    const pod = {};
+    b.podium.tables.forEach(tb => {
+      const dans2 = l => codes.indexOf(l.site) >= 0;
+      const mien = tb.lignes.filter(dans2);
+      if(!mien.length) return;
+      const res = tb.lignes.filter(l => pops.indexOf(st(l.site)) >= 0);
+      const integ = tb.lignes.filter(l => st(l.site) === "I");
+      const refs = [];
+      if(integ.length) refs.push({nom:NOM_INT, v:agregatPodium(integ), n:integ.length});
+      if(res.length) refs.push({nom:nomRes, v:agregatPodium(res), n:res.length});
+      const parSite = {};
+      mien.forEach(l => (parSite[l.site] = parSite[l.site] || []).push(l));
+      pod[tb.nature] = {titre:tb.titre, v:agregatPodium(mien), n:mien.length, refs:refs, collabs:mien,
+        details:Object.keys(parSite).map(cd => ({code:cd, site:(ref[cd] && ref[cd].site) || cd, v:agregatPodium(parSite[cd])}))};
+    });
+    if(Object.keys(pod).length) ctx.podium = pod;
   }
   return ctx;
 }
@@ -1582,8 +1841,9 @@ function rendreOss(ctx){
   h += tableComparee(lignes(OSS_LIGNES, c));
   h += tablePopulations(ctx, "oss", POP_OSS);
   const inter = magasinsIntervention(ctx, E.trimestre);
+  const qz = quinzainesAffichees();
   h += "<h3 class='sousTitre'>Dispositif de réaction rapide sur le " + esc(E.trimestre) + " (4 semaines consécutives à -15 % ou moins)</h3>" +
-    (inter.length ? tableSimple(["Magasin","Population","Périodes concernées (OSS hors salons, quinzaines)"],
+    (inter.length ? tableSimple(["Magasin","Population","Périodes concernées (" + libSalons(qz.salons) + ", quinzaines)"],
       inter.map(x => [esc(x.site), LIB_POP[x.statut] || "", {t:esc(x.periodes.join(" · ")), cl:"sec"}]))
     : vide("Aucun magasin du groupement n'a atteint le seuil sur le trimestre."));
   // trimestres
@@ -1598,12 +1858,12 @@ function rendreOss(ctx){
         {t:fmtPct(dR), cl:"sec"}, {t:fmtPts(ec), cl:"d " + classe(ec, S_VIGIL)}, fmt(x.portN1,"eur"), fmt(x.portN,"eur")];
     }), ["","","",E.trimestre === "T4" ? "total" : ""]);
   // quinzaines
-  const labs = E.base.oss.quinzaines;
+  const labs = qz.labs;
   if(labs.length){
-    const vals = labs.map(l => ({l:l, e:fini(c.v.hsEur[l]), p:fini(c.v.hsPct[l])}));
+    const vals = labs.map(l => { const x = ecartQuinzaine(c.v, l, qz.salons); return {l:l, e:x.eur, p:x.pct}; });
     const max = Math.max(1, ...vals.map(x => Math.abs(x.e || 0)));
     const W = 760, H = 150, pas = W / vals.length, mid = H/2;
-    let svg = "<svg viewBox='0 0 " + W + " " + (H + 34) + "' role='img' aria-label='Écart OSS hors salons N contre N-1 par quinzaine' style='width:100%;min-width:620px;height:auto;display:block'>";
+    let svg = "<svg viewBox='0 0 " + W + " " + (H + 34) + "' role='img' aria-label='Écart " + esc(libSalons(qz.salons)) + " N contre N-1 par quinzaine' style='width:100%;min-width:620px;height:auto;display:block'>";
     svg += "<line x1='0' x2='" + W + "' y1='" + mid + "' y2='" + mid + "' stroke='#9AA8B5' stroke-width='1'/>";
     vals.forEach((x, i) => {
       if(x.e === null) return;
@@ -1613,7 +1873,7 @@ function rendreOss(ctx){
       if(i % 2 === 0) svg += "<text x='" + (i*pas + pas/2).toFixed(1) + "' y='" + (H + 14) + "' font-size='10' text-anchor='middle' fill='#6B7A88'>" + esc(x.l.split("-")[0]) + "</text>";
     });
     svg += "</svg>";
-    h += "<h3 class='sousTitre'>OSS hors salons, écart N contre N-1 par quinzaine</h3><div class='enrobe'>" + svg + "</div>";
+    h += "<h3 class='sousTitre'>" + esc(libSalons(qz.salons)) + ", écart N contre N-1 par quinzaine</h3><div class='enrobe'>" + svg + "</div>";
   }
   const col = [
     ["Facturé N", (v, t, n) => cMoy(oy(v,"N","facture"),"eur",n)],
@@ -1653,6 +1913,7 @@ function rendrePerf(ctx){
 }
 
 /* --- partie PMCA --- */
+const PMCA_PERIMETRES = [["T","Tous clients"],["D","Département d'origine"],["HD","Hors département"]];
 function partPmca(x, p, typ, per){ return div(pm(x, p, typ, per, "nbCli"), pm(x, p, "TOUS", "T", "nbCli")); }
 function partCaPmca(x, p, typ){ return div(pm(x, p, typ, "T", "ca"), pm(x, p, "TOUS", "T", "ca")); }
 function rendrePmca(ctx){
@@ -1682,6 +1943,16 @@ function rendrePmca(ctx){
   });
   h += "<h3 class='sousTitre'>Origine géographique de la clientèle</h3>" + tableSimple(
     ["Périmètre","Nb clients","Part N","Part N-1","Δ part","Part " + minuscule(c.refs[0].nom),"PMCA","Δ PMCA N-1"], deptLignes);
+  h += "<h3 class='sousTitre'>Nombre de clients : tous et département d'origine</h3>" + tableSimple(
+    ["Périmètre","N-1","N","Δ N-1", minuscule(c.refs[0].nom) + " Δ N-1","Écart"],
+    PMCA_PERIMETRES.map(([per, lib]) => {
+      const a = pm(v,"N1","TOUS",per,"nbCli"), b = pm(v,"N","TOUS",per,"nbCli");
+      const d = variation("eur", b, Z(a));
+      const dR = R ? variation("eur", pm(R,"N","TOUS",per,"nbCli"), Z(pm(R,"N1","TOUS",per,"nbCli"))) : null;
+      const ec = (d !== null && dR !== null) ? d - dR : null;
+      return [lib, fmt(a,"ent"), "<b>" + fmt(b,"ent") + "</b>", cEvol(d,"eur"), {t:fmtPct(dR), cl:"sec"},
+        {t:fmtPts(ec), cl:"d " + classe(ec, S_VIGIL)}];
+    }));
   const g = (x, p, k) => pm(x, p, "TOUS", "T", k);
   const col = [
     ["Nb clients", (x, tot, n) => cVal(n ? div(g(x,"N","nbCli"), n) : g(x,"N","nbCli"),"ent")],
@@ -1692,6 +1963,61 @@ function rendrePmca(ctx){
     ["Rang I+F", (x, tot) => tot ? "" : cVal(g(x,"N","rang"),"rang")]
   ];
   h += "<h3 class='sousTitre'>Détail par magasin</h3>" + tableDetail(c, col, x => g(x,"N","ca"), ctx);
+  z.innerHTML = h;
+}
+
+/* --- partie Podium --- */
+function ecartCell(ec){ return {t: ec === null ? "—" : (ec >= 0 ? "+" : "-") + fmt(Math.abs(ec),"eur"), cl:"d " + classe(ec, 1)}; }
+function rendrePodium(ctx){
+  const z = document.getElementById("corps_podium");
+  if(!E.base.podium){ z.innerHTML = vide("Importez le ClassementPodium au format PDF."); return; }
+  const p = ctx.podium;
+  if(!p){ z.innerHTML = absent("Podium", ctx); return; }
+  let h = "<p class='sous'>Cumul de l'exercice par collaborateur, par famille GMDR. Les familles prioritaires sont " +
+    PODIUM_PRIO.map(f => f.nom).join(", ") + ". Le potentiel chiffre ce que le groupement ferait sur ces familles au niveau de vente par collaborateur du réseau intégré.</p>";
+  [["acc","Accessoires"],["presta","Prestation"]].forEach(([nature, lib]) => {
+    const c = p[nature];
+    if(!c) return;
+    const R = c.refs.find(r => r.nom === "Réseau intégré") || c.refs[0];
+    h += "<h3 class='sousTitre'>" + esc(lib) + " — " + c.n + " collaborateur" + (c.n > 1 ? "s" : "") + " du groupement</h3>";
+    h += tableSimple(["Famille","Cumul","Part du total","Par collaborateur", (R ? minuscule(R.nom) : "réseau") + " par collaborateur","Écart"],
+      PODIUM_FAMILLES.map(f => {
+        const soi = c.v[f.k] * 1000, tete = div(soi, c.v.n);
+        const ref = (R && R.v) ? div(R.v[f.k] * 1000, R.v.n) : null;
+        const ec = (tete !== null && ref !== null) ? tete - ref : null;
+        return [esc(f.nom) + (f.prio ? " <span class='tag'>prioritaire</span>" : ""), fmt(soi,"eur"),
+          fmt(div(c.v[f.k], c.v.tot),"pct"), fmt(tete,"eur"), {t:fmt(ref,"eur"), cl:"sec"}, ecartCell(ec)];
+      }).concat([[
+        "<b>Total</b>", "<b>" + fmt(c.v.tot * 1000,"eur") + "</b>", "", "<b>" + fmt(div(c.v.tot * 1000, c.v.n),"eur") + "</b>",
+        {t:fmt((R && R.v) ? div(R.v.tot * 1000, R.v.n) : null,"eur"), cl:"sec"},
+        ecartCell((R && R.v) ? div(c.v.tot * 1000, c.v.n) - div(R.v.tot * 1000, R.v.n) : null)
+      ]]), PODIUM_FAMILLES.map(() => "").concat(["total"]));
+    const pot = potentielPodium(c.v, R ? R.v : null);
+    if(pot && pot.total > 0){
+      h += "<h4 class='sousTitre'>Potentiel sur les familles prioritaires</h4>" + tableSimple(
+        ["Famille prioritaire","Groupement par collaborateur","Réseau intégré par collaborateur","Écart","Potentiel"],
+        pot.lignes.map(l => [esc(l.nom), fmt(l.soi * 1000,"eur"), {t:fmt(l.ref * 1000,"eur"), cl:"sec"},
+          ecartCell(l.ecart === null ? null : -l.ecart * 1000), l.gain > 0 ? "<b>" + fmt(l.gain * 1000,"eur") + "</b>" : "—"])
+          .concat([["<b>Total</b>","","","","<b>" + fmt(pot.total * 1000,"eur") + "</b>"]]),
+        PODIUM_PRIO.map(() => "").concat(["total"]));
+    }
+    const det = c.details.slice().sort((a, b) => (b.v.tot || 0) - (a.v.tot || 0));
+    if(det.length > 1){
+      h += "<h4 class='sousTitre'>Par magasin</h4>" + tableSimple(
+        ["Magasin","Collaborateurs","Cumul","Familles prioritaires","Part prioritaire","Par collaborateur"],
+        det.map(x => [esc(nomCourt(x.site) || x.site), x.v.n, fmt(x.v.tot * 1000,"eur"),
+          fmt(x.v.prio * 1000,"eur"), fmt(x.v.partPrio,"pct"), fmt(div(x.v.tot * 1000, x.v.n),"eur")]));
+    }
+    const top = c.collabs.slice().sort((a, b) => (b.tot || 0) - (a.tot || 0)).slice(0, 10);
+    h += "<h4 class='sousTitre'>Classement des collaborateurs</h4>" + tableSimple(
+      ["Collaborateur","Magasin","Rang réseau","Cumul","N-1","Δ N-1","Familles prioritaires"],
+      top.map(l => {
+        const d = variation("eur", l.tot, Z(l.totN1));
+        return [esc(l.nom), esc(l.site), fmt(fini(l.rgTot),"rang"), fmt((l.tot || 0) * 1000,"eur"),
+          fmt((l.totN1 || 0) * 1000,"eur"), cEvol(d,"eur"),
+          fmt(PODIUM_PRIO.reduce((a, f) => a + (fini(l[f.k]) || 0), 0) * 1000,"eur")];
+      }));
+  });
   z.innerHTML = h;
 }
 
@@ -1776,16 +2102,18 @@ const SEUIL_INTERVENTION = -0.15;
 function magasinsIntervention(ctx, trimestre){
   const c = ctx.oss;
   if(!c) return [];
-  const labs = E.base.oss.quinzaines.filter(l => !trimestre || trimestreQuinzaine(l) === trimestre);
+  const qz = quinzainesAffichees();
+  const labs = qz.labs.filter(l => !trimestre || trimestreQuinzaine(l) === trimestre);
   return c.details.map(x => {
     const periodes = [];
     for(let i = 1; i < labs.length; i++){
-      const a = fini(x.v.hsPct[labs[i-1]]), b2 = fini(x.v.hsPct[labs[i]]);
+      const a = ecartQuinzaine(x.v, labs[i-1], qz.salons).pct, b2 = ecartQuinzaine(x.v, labs[i], qz.salons).pct;
       if(a !== null && b2 !== null && a <= SEUIL_INTERVENTION && b2 <= SEUIL_INTERVENTION) periodes.push(labs[i-1].split("-")[0] + "-" + labs[i].split("-")[1] + " (" + fmtPct(a) + ", " + fmtPct(b2) + ")");
     }
     return periodes.length ? {site:nomCourt(x.site) || x.site, statut:ctx.statutDe(x.code), periodes:periodes} : null;
   }).filter(Boolean);
 }
+function libSalons(salons){ return salons ? "OSS salons compris" : "OSS hors salons"; }
 
 /* ===== lecture ===== */
 function constat(niveau, axe, partie, titre, detail, indicateur){
@@ -1887,20 +2215,20 @@ function lectureOss(ctx){
       "Nb CDC signé " + fmtPct(dS) + ", PM signé " + fmtPct(dPs) + " sur N-1.", "Signé"));
   push(lectureEvolution(trouver(L,"portN"), "Perf ACC", "oss"));
 
-  const labs = E.base.oss.quinzaines.slice(-6);
+  const qzL = quinzainesAffichees(), labs = qzL.labs.slice(-6);
   if(labs.length === 6){
-    const eur = labs.reduce((a, l) => a + (fini(v.hsEur[l]) || 0), 0);
-    const nbPos = labs.filter(l => fini(v.hsEur[l]) > 0).length;
+    const eur = labs.reduce((a, l) => a + (ecartQuinzaine(v, l, qzL.salons).eur || 0), 0);
+    const nbPos = labs.filter(l => (ecartQuinzaine(v, l, qzL.salons).eur || 0) > 0).length;
     out.push(constat(nbPos >= 4 && eur > 0 ? "favorable" : nbPos <= 2 && eur < 0 ? "vigilance" : "neutre", "Perf ACC", "oss",
-      "OSS hors salons sur les 12 dernières semaines : " + (eur >= 0 ? "+" : "") + fmt(eur, "eur") + " sur N-1",
-      nbPos + " quinzaine" + (nbPos > 1 ? "s" : "") + " sur 6 au-dessus de N-1 (" + labs[0] + " à " + labs[5] + ").", "OSS hors salons"));
+      libSalons(qzL.salons) + " sur les 12 dernières semaines : " + (eur >= 0 ? "+" : "") + fmt(eur, "eur") + " sur N-1",
+      nbPos + " quinzaine" + (nbPos > 1 ? "s" : "") + " sur 6 au-dessus de N-1 (" + labs[0] + " à " + labs[5] + ").", libSalons(qzL.salons)));
   }
   push(lectureDispersion(c, ctx, x => variation("eur", oy(x,"N","facture"), Z(oy(x,"N1","facture"))), "le facturé", "Perf ACC", "oss", "Facturé par magasin"));
   const inter = magasinsIntervention(ctx, E.trimestre);
   if(inter.length)
     out.push(constat(inter.length >= 3 ? "alerte" : "vigilance", "Perf ACC", "oss",
       inter.length + " magasin" + (inter.length > 1 ? "s ont" : " a") + " déclenché le dispositif de réaction rapide sur le " + E.trimestre,
-      "4 semaines consécutives à -15 % ou moins sur l'OSS hors salons : " + enumere(inter.map(x => x.site), 8) + ".", "OSS hors salons"));
+      "4 semaines consécutives à -15 % ou moins sur l'" + minuscule(libSalons(qzL.salons)) + " : " + enumere(inter.map(x => x.site), 8) + ".", libSalons(qzL.salons)));
   (ctx.parPop || []).forEach(p => { const x = syntheseOssPop(p.ctx.oss, p.lib); if(x) out.push(x); });
   return out;
 }
@@ -2031,8 +2359,43 @@ function lectureClients(ctx){
   push(lectureNiveau(trouver(L,"portSurCa"), "Clients", "clients", {neutre:true}));
   return out;
 }
-const LECTURES = {oss:lectureOss, perf:lecturePerf, pmca:lecturePmca, clients:lectureClients};
-const PARTIES_ORDRE = ["oss","perf","pmca","clients"];
+function lecturePodium(ctx){
+  const p = ctx.podium;
+  if(!p) return [];
+  const out = [];
+  [["acc","accessoires"],["presta","prestation"]].forEach(([nature, lib]) => {
+    const c = p[nature];
+    if(!c) return;
+    const R = c.refs.find(r => r.nom === "Réseau intégré") || c.refs[0];
+    const tete = div(c.v.tot, c.v.n), ref = (R && R.v) ? div(R.v.tot, R.v.n) : null;
+    if(tete !== null && ref !== null){
+      const e = ref ? tete/ref - 1 : null;
+      out.push(constat(niveauDe(e, ECART_VALEUR[0], ECART_VALEUR[1]), "Perf ACC", "podium",
+        "Podium " + lib + " : " + fmt(tete * 1000,"eur") + " par collaborateur",
+        "Le groupement réalise " + fmt(tete * 1000,"eur") + " par collaborateur sur le podium " + lib +
+        ", contre " + fmt(ref * 1000,"eur") + " pour le réseau intégré, soit " + fmtPct(e) + ".", "podium " + lib));
+    }
+    const pot = potentielPodium(c.v, R ? R.v : null);
+    if(pot && pot.total > 0){
+      const pire = pot.lignes.slice().sort((a, b) => b.gain - a.gain)[0];
+      out.push(constat(pot.total * 1000 > 50000 ? "vigilance" : "neutre", "Perf ACC", "podium",
+        "Potentiel de " + fmt(pot.total * 1000,"eur") + " sur les familles prioritaires",
+        "Au niveau de vente par collaborateur du réseau intégré, le groupement gagnerait " + fmt(pot.total * 1000,"eur") +
+        " sur les cinq familles prioritaires, dont " + fmt(pire.gain * 1000,"eur") + " sur " + minuscule(pire.nom) + ".", "potentiel podium"));
+    }
+    const part = c.v.partPrio, partR = (R && R.v) ? R.v.partPrio : null;
+    if(part !== null && partR !== null){
+      const d = part - partR;
+      out.push(constat(niveauDe(d, S_VIGIL_PT, S_ALERTE_PT), "Perf ACC", "podium",
+        "Part des familles prioritaires : " + fmt(part,"pct"),
+        "Les cinq familles prioritaires pèsent " + fmt(part,"pct") + " du podium " + lib + " du groupement, contre " +
+        fmt(partR,"pct") + " pour le réseau intégré (" + fmtPts(d) + ").", "part prioritaire"));
+    }
+  });
+  return out;
+}
+const LECTURES = {oss:lectureOss, perf:lecturePerf, pmca:lecturePmca, clients:lectureClients, podium:lecturePodium};
+const PARTIES_ORDRE = ["oss","perf","pmca","clients","podium"];
 
 /* décomposition du CA 12 mois : clients x fréquence x PMF */
 function decomposition(ctx){
@@ -2084,15 +2447,15 @@ function carte(x, tag){
   return "<div class='constat " + x.niveau + "'><h3>" + esc(x.titre) +
     (tag ? "<span class='tag'>" + esc(tag) + "</span>" : "") + "</h3><p>" + esc(x.detail) + "</p></div>";
 }
-const TAGS = {oss:"OSS", perf:"Perf", pmca:"PMCA", clients:"Clients", croisee:"Croisée"};
+const TAGS = {oss:"OSS", perf:"Perf", pmca:"PMCA", clients:"Clients", podium:"Podium", croisee:"Croisée"};
 function tousConstats(ctx){
   ctx = ctx || contexte();
-  return lectureOss(ctx).concat(lecturePerf(ctx), lecturePmca(ctx), lectureClients(ctx), lectureCroisee(ctx));
+  return lectureOss(ctx).concat(lecturePerf(ctx), lecturePmca(ctx), lectureClients(ctx), lecturePodium(ctx), lectureCroisee(ctx));
 }
 
 function toutCalculer(){
   const ctx = contexte();
-  rendreOss(ctx); rendrePerf(ctx); rendrePmca(ctx); rendreClients(ctx);
+  rendreOss(ctx); rendrePerf(ctx); rendrePmca(ctx); rendreClients(ctx); rendrePodium(ctx);
   PARTIES_ORDRE.forEach(p => {
     const l = LECTURES[p](ctx);
     document.getElementById("lecture_" + p).innerHTML = l.length ? l.map(x => carte(x)).join("") : vide("La lecture apparaît une fois le tableau importé et le groupement choisi.");
@@ -2132,19 +2495,20 @@ function rendreLibelles(ctx){
   document.getElementById("sousCadre").textContent =
     (ctx.g ? "Groupement " + ctx.g.nom + " : " + ctx.codes.map(ctx.nomSite).join(", ") + ". " : "") +
     "Bilan du " + libT() + " (arrêté fin " + ms[2] + ") et feuille de route du " + libTs() + ".";
-  const aides = {oss:"Evol OSS Facturé INT FRA et STEP2.", perf:"Performance CA version Pabad.", pmca:"PMCA 12 mois glissants, saisons N et N-1.", clients:"Synthèse client de fin d'exercice."};
+  const aides = {oss:"Evol OSS Facturé INT FRA et STEP2.", perf:"Performance CA version Pabad.", pmca:"PMCA 12 mois glissants, saisons N et N-1.", clients:"Synthèse client de fin d'exercice.", podium:"ClassementPodium au format PDF."};
   Object.keys(aides).forEach(p => { const e = document.getElementById("etat_" + p); if(!e.textContent) e.textContent = aides[p]; });
 }
 function rendreSources(ctx){
   const b = E.base;
-  document.getElementById("sources").innerHTML = [["oss","OSS"],["perf","Performance"],["pmca","PMCA"],["clients","Synthèse client"]].map(([k, lib]) => {
+  document.getElementById("sources").innerHTML = [["oss","OSS"],["perf","Performance"],["pmca","PMCA"],["clients","Synthèse client"],["podium","Podium"]].map(([k, lib]) => {
     const charge = !!b[k], c = ctx[k];
-    const suffixe = !charge || !ctx.g ? "" : c ? " " + c.n + "/" + ctx.codes.length : " : absent";
+    const n = (k === "podium" && c) ? (c.acc || c.presta).details.length : (c ? c.n : 0);
+    const suffixe = !charge || !ctx.g ? "" : c ? " " + n + "/" + ctx.codes.length : " : absent";
     return "<span class='puce " + (charge && (!ctx.g || c) ? "ok" : "") + "' title='" + esc(charge ? b[k].fichier : "Non importé") + "'>" + lib + suffixe + "</span>";
   }).join("");
 }
 function majJauge(ctx){
-  const pts = [!!ctx.oss, !!ctx.perf, !!ctx.pmca, !!ctx.clients,
+  const pts = [!!ctx.oss, !!ctx.perf, !!ctx.pmca, !!ctx.clients, !!ctx.podium,
     OBJECTIFS.some(o => E.objectifs[o.k] && E.objectifs[o.k].obj !== null && E.objectifs[o.k].obj !== undefined),
     E.pa.some(l => l.action), !!E.fdr];
   document.getElementById("jauge").style.width = Math.round(pts.filter(Boolean).length / pts.length * 100) + "%";
@@ -2397,8 +2761,8 @@ function construireCR(ctx, n){
   if(ctx.oss){
     const inter = magasinsIntervention(ctx, T);
     L.push(inter.length
-      ? "Sur le " + T + ", " + inter.length + " magasin" + (inter.length > 1 ? "s ont" : " a") + " atteint ce seuil sur l'OSS hors salons : " + inter.map(x => x.site + (ctx.pops.length === 2 ? " (" + LIB_POP[x.statut] + ")" : "")).join(", ") + "."
-      : "Sur le " + T + ", aucun magasin du groupement n'a atteint ce seuil sur l'OSS hors salons.");
+      ? "Sur le " + T + ", " + inter.length + " magasin" + (inter.length > 1 ? "s ont" : " a") + " atteint ce seuil sur l'" + minuscule(libSalons(quinzainesAffichees().salons)) + " : " + inter.map(x => x.site + (ctx.pops.length === 2 ? " (" + LIB_POP[x.statut] + ")" : "")).join(", ") + "."
+      : "Sur le " + T + ", aucun magasin du groupement n'a atteint ce seuil sur l'" + minuscule(libSalons(quinzainesAffichees().salons)) + ".");
   }
   L.push("Si la situation ne s'améliore pas, un nouvel accompagnement est immédiatement engagé. La philosophie est de corriger rapidement les écarts sans attendre les bilans trimestriels.");
   L.push("");
@@ -2811,7 +3175,9 @@ async function exporterPPTX(){
       s.background = {color:"FFFFFF"};
       s.addShape(pptx.ShapeType.rect, {x:0, y:0, w:PP_W, h:0.78, fill:{color:PP.navy}, line:{type:"none"}});
       s.addShape(pptx.ShapeType.rect, {x:0, y:0.78, w:PP_W, h:0.05, fill:{color:PP.bleu}, line:{type:"none"}});
-      s.addText(ppTxt(titre), {x:PP_M, y:0.06, w:PP_W-2*PP_M, h:0.42, fontFace:PP_TITRE, fontSize:20, bold:true, color:"FFFFFF", valign:"middle"});
+      const tt = ppTxt(titre);
+      s.addText(tt, {x:PP_M, y:0.06, w:PP_W-2*PP_M, h:0.42, fontFace:PP_TITRE,
+        fontSize: tt.length > 54 ? 16 : tt.length > 46 ? 18 : 20, bold:true, color:"FFFFFF", valign:"middle"});
       if(sousTitre) s.addText(ppTxt(sousTitre), {x:PP_M, y:0.46, w:PP_W-2*PP_M, h:0.28, fontFace:PP_TEXTE, fontSize:11, color:PP.clair, valign:"middle"});
       s.addText(ppTxt(pied), {x:PP_M, y:PP_H-0.38, w:PP_W-2*PP_M, h:0.24, fontFace:PP_TEXTE, fontSize:9, color:PP.gris});
       return s;
@@ -2912,91 +3278,118 @@ async function exporterPPTX(){
         if(ecarts.length){
           const pire = ecarts.slice().sort((a, b) => a.e - b.e)[0], mieux = ecarts.slice().sort((a, b) => b.e - a.e)[0];
           s.addText(ppTxt("Écart le plus défavorable : " + pire.nom + " " + fmtPts(pire.e) + ".   Écart le plus favorable : " + mieux.nom + " " + fmtPts(mieux.e) + "."),
-            {x:PP_M, y:4.42, w:PP_W-2*PP_M, h:0.4, fontFace:PP_TEXTE, fontSize:12, color:PP.navy, valign:"middle"});
+            {x:PP_M, y:4.36, w:PP_W-2*PP_M, h:0.34, fontFace:PP_TEXTE, fontSize:12, color:PP.navy, valign:"middle"});
+        }
+        if(ctx.parPop && ctx.parPop.filter(p => p.ctx.oss).length === 2){
+          const parPop = ctx.parPop.map(p => {
+            const LP = lignes(OSS_LIGNES, p.ctx.oss);
+            return p.lib + " (" + p.ctx.oss.n + " mag.) : OSS " + fmtPct(trouver(LP, "oss").dN) + ", facturé " + fmtPct(trouver(LP, "facture").dN);
+          }).join("     ");
+          s.addText(ppTxt(parPop), {x:PP_M, y:4.70, w:PP_W-2*PP_M, h:0.34, fontFace:PP_TEXTE, fontSize:11, color:PP.gris, valign:"middle"});
         }
       }
     }
 
-    /* ===== 4. CA facturé par trimestre ===== */
+    /* ===== 4. CA facturé par trimestre, groupement et magasins intégrés =====
+       Les intégrés pèsent bien plus lourd en euros : deux graphiques côte à côte,
+       chacun à son échelle, plutôt qu'un axe commun qui écraserait le groupement. */
     if(ctx.oss && ["T1","T2","T3","T4"].some(q => ctx.oss.v.q[q] && fini(ctx.oss.v.q[q].real) !== null)){
       const c = ctx.oss, qs = ["T1","T2","T3","T4"];
-      const s = page("CA facturé par trimestre", "Réalisé de l'exercice face à N-1, en milliers d'euros");
-      s.addChart(pptx.ChartType.bar, [
-        {name:"N-1", labels:qs, values:qs.map(q => ppK(c.v.q[q] ? Z(c.v.q[q].n1) : null))},
-        {name:"Réalisé", labels:qs, values:qs.map(q => ppK(c.v.q[q] ? c.v.q[q].real : null))}
-      ], optChart({x:0.35, y:1.05, w:PP_W-0.7, h:2.85, barDir:"col", chartColors:[PP.vert, PP.bleu],
-        showValue:true, dataLabelPosition:"outEnd", dataLabelFormatCode:FMT_KE, valAxisLabelFormatCode:FMT_KE}));
-      const txt = qs.map(q => {
-        const x = c.v.q[q] || {}, d = variation("eur", x.real, Z(x.n1));
+      const RI = c.refs[0];
+      const s = page("CA facturé par trimestre", "Réalisé de l'exercice face à N-1, en milliers d'euros" + (RI ? "  ·  même lecture pour le " + minuscule(RI.nom) : ""));
+      const duo = !!(RI && RI.v && RI.v.q), larg = duo ? (PP_W - 2*PP_M - 0.3)/2 : PP_W - 0.7;
+      const grille = (v, x, titre) => {
+        s.addText(ppTxt(titre), {x:x, y:1.0, w:larg, h:0.26, fontFace:PP_TEXTE, fontSize:11, bold:true, color:PP.navy});
+        s.addChart(pptx.ChartType.bar, [
+          {name:"N-1", labels:qs, values:qs.map(q => ppK(v.q[q] ? Z(v.q[q].n1) : null))},
+          {name:"Réalisé", labels:qs, values:qs.map(q => ppK(v.q[q] ? v.q[q].real : null))}
+        ], optChart({x:x, y:1.28, w:larg, h:2.75, barDir:"col", chartColors:[PP.vert, PP.bleu],
+          showValue:true, dataLabelPosition:"outEnd", dataLabelFontSize:duo ? 7 : 9,
+          dataLabelFormatCode:FMT_KE, valAxisLabelFormatCode:FMT_KE}));
+      };
+      grille(c.v, duo ? PP_M : 0.35, "Groupement " + ctx.g.nom);
+      if(duo) grille(RI.v, PP_M + larg + 0.3, RI.nom + " (" + RI.n + " magasins)");
+      const ligneEvol = (v, lib) => lib + " :   " + qs.map(q => {
+        const x = v.q[q] || {}, d = variation("eur", x.real, Z(x.n1));
         return q + " " + (d === null ? "—" : fmtPct(d));
-      }).join("     ");
-      s.addText(ppTxt("Évolution sur N-1 :   " + txt), {x:PP_M, y:4.08, w:PP_W-2*PP_M, h:0.35, fontFace:PP_TEXTE, fontSize:12, color:PP.navy, bold:true, valign:"middle"});
+      }).join("   ");
+      s.addText(ppTxt(ligneEvol(c.v, "Groupement")), {x:PP_M, y:4.15, w:PP_W-2*PP_M, h:0.3, fontFace:PP_TEXTE, fontSize:11.5, color:PP.navy, bold:true, valign:"middle"});
+      if(duo) s.addText(ppTxt(ligneEvol(RI.v, RI.nom)), {x:PP_M, y:4.47, w:PP_W-2*PP_M, h:0.3, fontFace:PP_TEXTE, fontSize:11.5, color:PP.gris, valign:"middle"});
       const q4 = c.v.q[E.trimestre];
       if(q4 && fini(q4.prev) !== null)
         s.addText(ppTxt(E.trimestre + " : " + fmt(q4.real,"eur") + " réalisés pour " + fmt(q4.prev,"eur") + " prévus, soit " + fmtPct(variation("eur", q4.real, Z(q4.prev))) + " sur le prévisionnel."),
-          {x:PP_M, y:4.45, w:PP_W-2*PP_M, h:0.35, fontFace:PP_TEXTE, fontSize:11.5, color:PP.gris, valign:"middle"});
+          {x:PP_M, y:4.78, w:PP_W-2*PP_M, h:0.3, fontFace:PP_TEXTE, fontSize:11, color:PP.gris, valign:"middle"});
     }
 
-    /* ===== 5. OSS hors salons par quinzaine ===== */
-    if(ctx.oss && E.base.oss.quinzaines && E.base.oss.quinzaines.length >= 4){
-      const c = ctx.oss, labs = E.base.oss.quinzaines;
-      const vals = labs.map(l => ppK(fini(c.v.hsEur[l])));
-      const s = page("OSS hors salons : écart sur N-1, quinzaine par quinzaine", "Chaque barre compare deux semaines à la même période de l'exercice précédent, en milliers d'euros");
+    /* ===== 5. évolution en % du CA facturé, face aux magasins intégrés ===== */
+    if(ctx.oss && ctx.oss.refs[0] && ctx.oss.refs[0].v && ctx.oss.refs[0].v.q){
+      const c = ctx.oss, RI = c.refs[0], qs = ["T1","T2","T3","T4"];
+      const ev = v => qs.map(q => { const x = v.q[q] || {}; return ppPct(variation("eur", x.real, Z(x.n1))); });
+      const mien = ev(c.v), res = ev(RI.v);
+      if(mien.some(x => x !== null)){
+        const s = page("Évolution du CA facturé, trimestre par trimestre", "En pourcentage sur N-1, face au " + minuscule(RI.nom));
+        s.addChart(pptx.ChartType.bar, [
+          {name:"Groupement " + ctx.g.nom, labels:qs, values:mien},
+          {name:RI.nom, labels:qs, values:res}
+        ], optChart({x:0.35, y:1.05, w:PP_W-0.7, h:3.05, barDir:"col", chartColors:[PP.bleu, PP.vert],
+          showValue:true, dataLabelPosition:"outEnd", dataLabelFormatCode:FMT_PCT, valAxisLabelFormatCode:'0" %"'}));
+        const ecarts = qs.map((q, i) => (mien[i] !== null && res[i] !== null) ? {q:q, e:mien[i] - res[i]} : null).filter(Boolean);
+        if(ecarts.length){
+          const pire = ecarts.slice().sort((a, b) => a.e - b.e)[0], mieux = ecarts.slice().sort((a, b) => b.e - a.e)[0];
+          const cumG = variation("eur", qs.reduce((a, q) => a + ((c.v.q[q] && fini(c.v.q[q].real)) || 0), 0), Z(qs.reduce((a, q) => a + ((c.v.q[q] && fini(c.v.q[q].n1)) || 0), 0)));
+          const cumR = variation("eur", qs.reduce((a, q) => a + ((RI.v.q[q] && fini(RI.v.q[q].real)) || 0), 0), Z(qs.reduce((a, q) => a + ((RI.v.q[q] && fini(RI.v.q[q].n1)) || 0), 0)));
+          s.addText(ppTxt("Sur l'exercice : groupement " + fmtPct(cumG) + ", " + minuscule(RI.nom) + " " + fmtPct(cumR) + "."),
+            {x:PP_M, y:4.25, w:PP_W-2*PP_M, h:0.32, fontFace:PP_TEXTE, fontSize:12.5, color:PP.navy, bold:true, valign:"middle"});
+          s.addText(ppTxt("Trimestre le plus en retrait : " + pire.q + " " + fmtPts(pire.e/100) + ".   Le plus favorable : " + mieux.q + " " + fmtPts(mieux.e/100) + "."),
+            {x:PP_M, y:4.58, w:PP_W-2*PP_M, h:0.32, fontFace:PP_TEXTE, fontSize:11.5, color:PP.gris, valign:"middle"});
+        }
+      }
+    }
+
+    /* ===== 6. OSS par quinzaine, salons compris ===== */
+    if(ctx.oss && quinzainesAffichees().labs.length >= 4){
+      const c = ctx.oss, qz = quinzainesAffichees(), labs = qz.labs;
+      const vals = labs.map(l => ppK(ecartQuinzaine(c.v, l, qz.salons).eur));
+      const s = page(libSalons(qz.salons) + " : écart sur N-1 par quinzaine", "Chaque barre compare deux semaines à la même période de l'exercice précédent, en milliers d'euros");
       const series = ppSigne(vals);
       series.forEach(x => x.labels = labs);
       s.addChart(pptx.ChartType.bar, series, optChart({x:0.35, y:1.05, w:PP_W-0.7, h:2.95, barDir:"col", barGrouping:"stacked",
         chartColors:[PP.vert, PP.rouge], barGapWidthPct:35, showValue:false, valAxisLabelFormatCode:FMT_KE, catAxisLabelFontSize:7.5, catAxisLabelRotate:-45}));
       const pos = vals.filter(v => v !== null && v > 0).length, tot = vals.filter(v => v !== null).length;
       const cumul = vals.filter(v => v !== null).reduce((a, b) => a + b, 0);
-      const douze = labs.slice(-6), cum12 = douze.reduce((a, l) => a + (fini(c.v.hsEur[l]) || 0), 0);
+      const douze = labs.slice(-6), cum12 = douze.reduce((a, l) => a + (ecartQuinzaine(c.v, l, qz.salons).eur || 0), 0);
       s.addText(ppTxt(pos + " quinzaines sur " + tot + " au-dessus de N-1.   Cumul de l'exercice : " + fmt(cumul*1000, "eur") + ".   12 dernières semaines : " + (cum12 >= 0 ? "+" : "") + fmt(cum12, "eur") + "."),
         {x:PP_M, y:4.18, w:PP_W-2*PP_M, h:0.45, fontFace:PP_TEXTE, fontSize:12, color:PP.navy, bold:true, valign:"middle"});
     }
 
-    /* ===== 6. STEP 4 et STEP 2 ===== */
-    if(ctx.parPop && ctx.parPop.filter(p => p.ctx.oss).length === 2){
-      const cles = [["oss","OSS"],["facture","Facturé"],["nbFacOs","Trafic OS"],["nbSigne","Nb signé"],["pmSigne","PM signé"]];
-      const evol = c => { const L = lignes(OSS_LIGNES, c); return cles.map(k => ppPct(trouver(L, k[0]).dN)); };
-      const s = page("STEP 4 et STEP 2", "Évolution sur N-1 de chaque population, face au " + minuscule(nomRes));
-      const series = ctx.parPop.map((p, i) => ({name:p.lib + " (" + p.ctx.oss.n + " mag.)", labels:cles.map(k => k[1]), values:evol(p.ctx.oss)}));
-      series.push({name:"Ensemble", labels:cles.map(k => k[1]), values:evol(ctx.oss)});
-      s.addChart(pptx.ChartType.bar, series, optChart({x:0.35, y:1.05, w:PP_W-0.7, h:3.1, barDir:"col",
-        chartColors:[PP.bleu, PP.vert, PP.violet], showValue:true, dataLabelPosition:"outEnd", dataLabelFontSize:8,
-        dataLabelFormatCode:FMT_PCT, valAxisLabelFormatCode:'0" %"'}));
-      const ligneL = ctx.parPop.map(p => {
-        const L = lignes(OSS_LIGNES, p.ctx.oss), d = trouver(L, "oss").dN;
-        return p.lib + " : OSS " + (d === null ? "—" : fmtPct(d));
-      }).join("     ");
-      s.addText(ppTxt(ligneL), {x:PP_M, y:4.32, w:PP_W-2*PP_M, h:0.38, fontFace:PP_TEXTE, fontSize:12.5, color:PP.navy, bold:true, valign:"middle"});
-    }
-
-    /* ===== 7. performance magasin par magasin ===== */
+    /* ===== 7. performance magasin par magasin : tous les magasins ===== */
     (function(){
       const c = ctx.oss || ctx.perf;
       if(!c || c.details.length < 2) return;
       const mesure = ctx.oss
         ? x => variation("eur", oy(x,"N","facture"), Z(oy(x,"N1","facture")))
         : x => variation("eur", x.caRea, Z(x.caN1));
-      let l = c.details.map(x => ({nom:nomCourt(x.site) || x.site, e:mesure(x.v)})).filter(x => x.e !== null)
-        .sort((a, b) => a.e - b.e);
+      const deuxPops = ctx.pops && ctx.pops.length === 2;
+      const l = c.details.map(x => ({nom:(nomCourt(x.site) || x.site) + (deuxPops ? " (" + (LIB_POP[ctx.statutDe(x.code)] || "") + ")" : ""), e:mesure(x.v)}))
+        .filter(x => x.e !== null).sort((a, b) => a.e - b.e);
       if(l.length < 2) return;
-      let note = "";
-      if(l.length > 12){ const n = l.length; l = l.slice(0, 6).concat(l.slice(-6)); note = "  ·  les 6 plus en retrait et les 6 plus en progression sur " + n + " magasins"; }
-      const s = page("Performance magasin par magasin", (ctx.oss ? "Facturé" : "CA accessoires") + ", évolution sur N-1" + note);
+      const dense = l.length > 12;
+      const s = page("Performance magasin par magasin", (ctx.oss ? "Facturé" : "CA accessoires") + ", évolution sur N-1  ·  " + l.length + " magasins");
       const series = ppSigne(l.map(x => ppPct(x.e)));
       series.forEach(x => x.labels = l.map(y => y.nom));
-      s.addChart(pptx.ChartType.bar, series, optChart({x:0.35, y:1.05, w:PP_W-0.7, h:3.5, barDir:"bar", barGrouping:"stacked",
-        chartColors:[PP.vert, PP.rouge], barGapWidthPct:40, showValue:true, dataLabelFormatCode:FMT_PCT,
-        dataLabelFontSize:9, catAxisLabelFontSize:9, catAxisLabelPos:"low", valAxisLabelFormatCode:'0" %"'}));
       const bas = l.filter(x => x.e <= -0.10);
+      const hChart = bas.length ? (dense ? 3.85 : 3.5) : 4.0;
+      s.addChart(pptx.ChartType.bar, series, optChart({x:0.35, y:1.0, w:PP_W-0.7, h:hChart, barDir:"bar", barGrouping:"stacked",
+        chartColors:[PP.vert, PP.rouge], barGapWidthPct:dense ? 18 : 40, showValue:true, dataLabelFormatCode:FMT_PCT,
+        dataLabelFontSize:dense ? 7 : 9, catAxisLabelFontSize:dense ? 7 : 9, catAxisLabelPos:"low", valAxisLabelFormatCode:'0" %"'}));
       if(bas.length) s.addText(ppTxt(bas.length + " magasin" + (bas.length > 1 ? "s" : "") + " en retrait de plus de 10 % : " + bas.map(x => x.nom).join(", ") + "."),
-        {x:PP_M, y:4.63, w:PP_W-2*PP_M, h:0.35, fontFace:PP_TEXTE, fontSize:11, color:PP.rouge, bold:true, valign:"middle"});
+        {x:PP_M, y:1.0 + hChart + 0.05, w:PP_W-2*PP_M, h:0.35, fontFace:PP_TEXTE, fontSize:10.5, color:PP.rouge, bold:true, valign:"middle"});
     })();
 
     /* ===== 8. dispositif de réaction rapide ===== */
     if(ctx.oss){
       const inter = magasinsIntervention(ctx, E.trimestre);
-      const s = page("Dispositif de réaction rapide", "4 semaines consécutives à -15 % ou moins sur l'OSS hors salons — " + E.trimestre);
+      const s = page("Dispositif de réaction rapide", "4 semaines consécutives à -15 % ou moins sur l'" + minuscule(libSalons(quinzainesAffichees().salons)) + " — " + E.trimestre);
       s.addText([
         {text:"Le seuil déclenche une intervention terrain", options:{bold:true}},
         {text:" mobilisant le Collab Réseau, l'ARE, voire l'OMM : vérifier le respect des KPI, analyser les causes de la baisse, remettre le magasin dans une dynamique positive."}
@@ -3058,7 +3451,65 @@ async function exporterPPTX(){
         {x:PP_M, y:4.5, w:PP_W-2*PP_M, h:0.55, fontFace:PP_TEXTE, fontSize:10.5, color:PP.gris, valign:"top"});
     })();
 
-    /* ===== 10. enseignements et priorités ===== */
+    /* ===== 10. focus PMCA : nombre de clients, tous et département d'origine ===== */
+    if(ctx.pmca){
+      const c = ctx.pmca, v = c.v, RI = c.refs[0];
+      const per = [["T","Tous clients"],["D","Département d'origine"]];
+      const ev = (x, p) => variation("eur", pm(x,"N","TOUS",p,"nbCli"), Z(pm(x,"N1","TOUS",p,"nbCli")));
+      const mien = per.map(([p]) => ppPct(ev(v, p)));
+      if(mien.some(x => x !== null)){
+        const res = per.map(([p]) => RI && RI.v ? ppPct(ev(RI.v, p)) : null);
+        const s = page("Nombre de clients : tous et département d'origine",
+          "PMCA 12 mois glissants, saison " + (c.sp.libN || "") + " face à " + (c.sp.libN1 || "N-1") + (RI ? "  ·  référence : " + minuscule(RI.nom) : ""));
+        const series = [{name:"Groupement " + ctx.g.nom, labels:per.map(x => x[1]), values:mien}];
+        if(res.some(x => x !== null)) series.push({name:RI.nom, labels:per.map(x => x[1]), values:res});
+        s.addChart(pptx.ChartType.bar, series, optChart({x:0.35, y:1.05, w:PP_W-0.7, h:2.75, barDir:"col",
+          chartColors:[PP.bleu, PP.vert], showValue:true, dataLabelPosition:"outEnd",
+          dataLabelFormatCode:FMT_PCT, valAxisLabelFormatCode:'0" %"'}));
+        const nb = p => fmt(pm(v,"N","TOUS",p,"nbCli"),"ent");
+        const part = partPmca(v,"N","TOUS","D"), partN1 = partPmca(v,"N1","TOUS","D");
+        const partR = RI && RI.v ? partPmca(RI.v,"N","TOUS","D") : null;
+        s.addText(ppTxt(nb("T") + " clients au total, dont " + nb("D") + " du département d'origine."),
+          {x:PP_M, y:3.95, w:PP_W-2*PP_M, h:0.3, fontFace:PP_TEXTE, fontSize:12.5, color:PP.navy, bold:true, valign:"middle"});
+        if(part !== null) s.addText(ppTxt("Part du département d'origine : " + fmt(part,"pct") +
+            (partN1 !== null ? " contre " + fmt(partN1,"pct") + " l'an dernier" : "") +
+            (partR !== null ? ", " + fmt(partR,"pct") + " pour le " + minuscule(RI.nom) : "") + "."),
+          {x:PP_M, y:4.27, w:PP_W-2*PP_M, h:0.3, fontFace:PP_TEXTE, fontSize:11.5, color:PP.gris, valign:"middle"});
+        const pmcaD = pm(v,"N","TOUS","D","pmca"), pmcaHD = pm(v,"N","TOUS","HD","pmca");
+        if(pmcaD !== null && pmcaHD !== null) s.addText(ppTxt("PMCA : " + fmt(pmcaD,"eur2") + " sur le département d'origine, " + fmt(pmcaHD,"eur2") + " hors département."),
+          {x:PP_M, y:4.59, w:PP_W-2*PP_M, h:0.3, fontFace:PP_TEXTE, fontSize:11.5, color:PP.gris, valign:"middle"});
+      }
+    }
+
+    /* ===== 11. podium : familles prioritaires et potentiel ===== */
+    if(ctx.podium && (ctx.podium.acc || ctx.podium.presta)){
+      const c = ctx.podium.acc || ctx.podium.presta;
+      const nature = ctx.podium.acc ? "accessoires" : "prestation";
+      const RI = c.refs.find(r => r.nom === "Réseau intégré") || c.refs[0];
+      const tete = f => ppK(div(c.v[f.k] * 1000, c.v.n));
+      const teteR = f => (RI && RI.v) ? ppK(div(RI.v[f.k] * 1000, RI.v.n)) : null;
+      const s = page("Podium " + nature + " : familles prioritaires",
+        "Cumul par collaborateur, en milliers d'euros  ·  " + c.n + " collaborateurs du groupement" + (RI ? " face au " + minuscule(RI.nom) : ""));
+      const series = [{name:"Groupement " + ctx.g.nom, labels:PODIUM_PRIO.map(f => f.nom), values:PODIUM_PRIO.map(tete)}];
+      if(RI && RI.v) series.push({name:RI.nom, labels:PODIUM_PRIO.map(f => f.nom), values:PODIUM_PRIO.map(teteR)});
+      s.addChart(pptx.ChartType.bar, series, optChart({x:0.35, y:1.05, w:PP_W-0.7, h:2.8, barDir:"col",
+        chartColors:[PP.bleu, PP.vert], showValue:true, dataLabelPosition:"outEnd", dataLabelFormatCode:FMT_KE,
+        valAxisLabelFormatCode:FMT_KE}));
+      const pot = potentielPodium(c.v, RI ? RI.v : null);
+      s.addText(ppTxt("Les cinq familles prioritaires pèsent " + fmt(c.v.partPrio,"pct") + " du podium du groupement" +
+        ((RI && RI.v && RI.v.partPrio !== null) ? ", contre " + fmt(RI.v.partPrio,"pct") + " pour le " + minuscule(RI.nom) : "") + "."),
+        {x:PP_M, y:4.0, w:PP_W-2*PP_M, h:0.3, fontFace:PP_TEXTE, fontSize:12, color:PP.navy, bold:true, valign:"middle"});
+      if(pot && pot.total > 0){
+        const tri = pot.lignes.slice().sort((a, b) => b.gain - a.gain).filter(x => x.gain > 0).slice(0, 3);
+        s.addShape(pptx.ShapeType.roundRect, {x:PP_M, y:4.33, w:PP_W-2*PP_M, h:0.72, fill:{color:"FFF6E9"}, line:{color:PP.ambre, width:1}, rectRadius:0.06});
+        s.addText([
+          {text:"Potentiel " + fmt(pot.total * 1000,"eur"), options:{bold:true, color:PP.ambre}},
+          {text:"  au niveau de vente par collaborateur du " + minuscule(RI.nom) + " : " + tri.map(x => minuscule(x.nom) + " " + fmt(x.gain * 1000,"eur")).join(", ") + ".", options:{color:PP.encre}}
+        ], {x:PP_M+0.18, y:4.33, w:PP_W-2*PP_M-0.36, h:0.72, fontFace:PP_TEXTE, fontSize:11.5, valign:"middle"});
+      }
+    }
+
+    /* ===== 12. enseignements et priorités ===== */
     (function(){
       const tous = tousConstats(ctx);
       const forts = tous.filter(x => x.niveau === "favorable").slice(0, 5);
@@ -3146,7 +3597,7 @@ function appliquer(d){
   const vierge = etatVide();
   Object.keys(vierge).forEach(k => E[k] = vierge[k]);
   Object.keys(vierge).forEach(k => { if(d && d[k] !== undefined) E[k] = d[k]; });
-  E.base = Object.assign({oss:null, perf:null, pmca:null, clients:null}, (d && d.base) || {});
+  E.base = Object.assign(baseVide(), (d && d.base) || {});
   E.schema = SCHEMA;
 }
 async function ouvrir(input){
@@ -3177,7 +3628,7 @@ async function remiseAZero(mode){
   E.date = new Date().toISOString().slice(0,10);
   if(tout){
     await sauverBase();
-    ["cadre","oss","perf","pmca","clients"].forEach(p => { const e = document.getElementById("etat_" + p); if(e){ e.className = "etat sousimp"; e.textContent = ""; } });
+    ["cadre","oss","perf","pmca","clients","podium"].forEach(p => { const e = document.getElementById("etat_" + p); if(e){ e.className = "etat sousimp"; e.textContent = ""; } });
     document.getElementById("etat_cadre").textContent = "Tableaux effacés. Importez les tableaux réseau, puis choisissez le groupement dans l'en-tête.";
   }
   remplirGroupements(); remplirChamps(); toutCalculer(); rendrePA(); sauver();
@@ -3200,7 +3651,7 @@ async function demarrer(){
   const ancien = Object.values(E.base).some(Boolean);
   try{
     const base = ancien ? null : await BASE_IDB.lire();
-    if(base) E.base = Object.assign({oss:null, perf:null, pmca:null, clients:null}, base);
+    if(base) E.base = Object.assign(baseVide(), base);
     if(ancien){ await sauverBase(); sauver(); }
   }catch(e){}
   if(!repris){
